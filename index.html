@@ -2,554 +2,195 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Flight Tracker">
-<title>Randy Neal Flight Tracker</title>
+<title>Flight Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- PWA -->
+<link rel="manifest" href="data:application/json,{
+  &quot;name&quot;:&quot;Flight Tracker&quot;,
+  &quot;short_name&quot;:&quot;Flights&quot;,
+  &quot;display&quot;:&quot;standalone&quot;,
+  &quot;background_color&quot;:&quot;#000000&quot;
+}">
+<meta name="theme-color" content="#000000">
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #000;
-  color: #fff;
-  overflow-x: hidden;
-  -webkit-user-select: none;
-  user-select: none;
+body { margin:0; font-family:system-ui; background:#000; color:#fff }
+header { padding:15px; text-align:center; background:#111 }
+section { padding:15px }
+.card { background:#1c1c1e; padding:15px; border-radius:10px; margin-bottom:15px }
+button { padding:12px; border:none; border-radius:8px; font-weight:600; margin:5px 0 }
+.start { background:#34c759 }
+.stop { background:#ff3b30 }
+.reset { background:#8e8e93 }
+input, select, textarea {
+  width:100%; padding:10px; border-radius:6px;
+  border:1px solid #333; background:#2c2c2e; color:#fff
 }
-.status-bar {
-  height: 44px;
-  background: rgba(0,0,0,0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-bottom: 1px solid #333;
-}
-.header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
-  text-align: center;
-}
-.header h1 { font-size: 1.4em; margin-bottom: 5px; }
-.header p { font-size: 0.85em; opacity: 0.9; }
-.tabs {
-  display: flex;
-  background: #1c1c1e;
-  border-bottom: 1px solid #333;
-}
-.tab {
-  flex: 1;
-  padding: 15px;
-  text-align: center;
-  border: none;
-  background: none;
-  color: #8e8e93;
-  font-size: 0.9em;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-.tab.active {
-  color: #fff;
-  border-bottom: 2px solid #667eea;
-}
-.content {
-  padding: 20px;
-  display: none;
-}
-.content.active { display: block; }
-.card {
-  background: #1c1c1e;
-  border-radius: 12px;
-  padding: 15px;
-  margin-bottom: 15px;
-  border: 1px solid #2c2c2e;
-}
-.card h3 {
-  color: #667eea;
-  margin-bottom: 10px;
-  font-size: 1.1em;
-}
-.input-group {
-  margin-bottom: 15px;
-}
-.input-group label {
-  display: block;
-  color: #8e8e93;
-  font-size: 0.85em;
-  margin-bottom: 5px;
-}
-.input-group input,
-.input-group select,
-.input-group textarea {
-  width: 100%;
-  padding: 12px;
-  background: #2c2c2e;
-  border: 1px solid #3a3a3c;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 16px;
-}
-.input-group textarea {
-  resize: vertical;
-  min-height: 60px;
-}
-.btn {
-  width: 100%;
-  padding: 15px;
-  border: none;
-  border-radius: 10px;
-  font-size: 1em;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 10px;
-}
-.btn-start { background: #34c759; color: #fff; }
-.btn-stop { background: #ff3b30; color: #fff; }
-.btn-reset { background: #8e8e93; color: #fff; }
-.btn-primary { background: #667eea; color: #fff; }
-.btn-secondary { background: #3a3a3c; color: #fff; }
-.timer {
-  font-size: 3em;
-  text-align: center;
-  font-weight: 300;
-  padding: 30px 0;
-  font-variant-numeric: tabular-nums;
-}
-.weather-info {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  margin-top: 10px;
-}
-.weather-item {
-  background: #2c2c2e;
-  padding: 12px;
-  border-radius: 8px;
-  text-align: center;
-}
-.weather-item .label {
-  color: #8e8e93;
-  font-size: 0.8em;
-  margin-bottom: 5px;
-}
-.weather-item .value {
-  font-size: 1.3em;
-  font-weight: 600;
-}
-.flight-log-item {
-  background: #2c2c2e;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  border-left: 4px solid #667eea;
-}
-.flight-log-item.offline {
-  border-left-color: #ff9500;
-}
-.flight-log-item h4 {
-  margin-bottom: 8px;
-  color: #667eea;
-}
-.flight-log-item p {
-  color: #8e8e93;
-  font-size: 0.85em;
-  margin: 3px 0;
-}
-.maintenance-item {
-  background: #2c2c2e;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 10px;
-}
-.maintenance-item h4 {
-  color: #fff;
-  margin-bottom: 5px;
-}
-.maintenance-item p {
-  color: #8e8e93;
-  font-size: 0.85em;
-}
-.status-indicator {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 8px;
-}
-.status-online { background: #34c759; }
-.status-offline { background: #ff9500; }
-.empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  color: #8e8e93;
-}
-.badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75em;
-  font-weight: 600;
-  margin-left: 8px;
-}
-.badge-offline { background: #ff9500; color: #000; }
-.badge-synced { background: #34c759; color: #000; }
-#map {
-  height: 300px;
-  margin-top: 10px;
-  border-radius: 12px;
-  border: 1px solid #3a3a3c;
-}
+#map { height:300px; border-radius:10px }
+.timer { font-size:2.5em; text-align:center }
+.flight { border-left:4px solid #667eea; padding-left:10px; margin-bottom:10px }
 </style>
 </head>
+
 <body>
 
-<div class="status-bar">
-  <span id="connectionStatus">
-    <span class="status-indicator status-online"></span>
-    Online
-  </span>
+<header>
+<h2>✈️ Flight Tracker</h2>
+<p>Randy Neal</p>
+</header>
+
+<section>
+
+<div class="card">
+<div class="timer" id="timer">00:00:00</div>
+<button class="start" onclick="startTimer()">Start</button>
+<button class="stop" onclick="stopTimer()">Stop</button>
+<button class="reset" onclick="resetTimer()">Reset</button>
 </div>
 
-<div class="header">
-  <h1>✈️ Flight Tracker</h1>
-  <p>Randy Neal | License #52082259</p>
+<div class="card">
+<select id="drone">
+<option value="">Select Drone</option>
+<option>Skyrover S1</option>
+<option>Skydio X10-1</option>
+<option>Skydio X10-2.2</option>
+<option>Skydio X10-3</option>
+<option>Skydio X10-4</option>
+<option>Skydio X10-5</option>
+</select>
+<input id="address" placeholder="Auto-filled or type address">
+<textarea id="purpose" placeholder="Flight purpose"></textarea>
+<button onclick="saveFlight()">Save Flight</button>
 </div>
 
-<div class="tabs">
-  <button class="tab active" onclick="switchTab('flight')">Flight</button>
-  <button class="tab" onclick="switchTab('history')">History</button>
-  <button class="tab" onclick="switchTab('maintenance')">Maintenance</button>
+<div class="card">
+<h3>Map</h3>
+<div id="map"></div>
 </div>
 
-<!-- FLIGHT TAB -->
-<div id="flight-content" class="content active">
-
-  <div class="card">
-    <h3>Flight Timer</h3>
-    <div class="timer" id="timer">00:00:00</div>
-    <div style="display:flex; gap:10px;">
-      <button id="startBtn" class="btn btn-start" onclick="startFlight()">Start</button>
-      <button id="stopBtn" class="btn btn-stop" onclick="stopFlight()">Stop</button>
-      <button id="resetBtn" class="btn btn-reset" onclick="resetFlight()">Reset</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Flight Details</h3>
-    <div class="input-group">
-      <label>Drone Type</label>
-      <select id="droneType">
-        <option value="">Select Drone</option>
-        <option value="DJI Mavic PT 30T #1">DJI Mavic PT 30T #1</option>
-        <option value="DJI Mavic 3T #1.2">DJI Mavic 3T #1.2</option>
-        <option value="DJI Mavic 3T #2.1">DJI Mavic 3T #2.1</option>
-        <option value="DJI Mavic 3T #3">DJI Mavic 3T #3</option>
-        <option value="DJI Mavic 3E #1">DJI Mavic 3E #1</option>
-        <option value="DJI Mini 3 Pro #1">DJI Mini 3 Pro #1</option>
-        <option value="DJI Mini 3 Pro #2">DJI Mini 3 Pro #2</option>
-        <option value="DJI Avata Patrol #1">DJI Avata Patrol #1</option>
-        <option value="Autel 640T V3 #1">Autel 640T V3 #1</option>
-        <option value="Skydio X2E">Skydio X2E</option>
-        <option value="DJI Matrice 4T-1">DJI Matrice 4T-1</option>
-        <option value="DJI Matrice 4T-2">DJI Matrice 4T-2</option>
-        <option value="DJI Matrice 4T-3">DJI Matrice 4T-3</option>
-        <option value="Skyrover S1">Skyrover S1</option>
-        <option value="Skydio X10-1">Skydio X10-1</option>
-        <option value="Skydio X10-2.2">Skydio X10-2.2</option>
-        <option value="Skydio X10-3">Skydio X10-3</option>
-        <option value="Skydio X10-4">Skydio X10-4</option>
-        <option value="Skydio X10-5">Skydio X10-5</option>
-      </select>
-    </div>
-
-    <div class="input-group">
-      <label>Location / Address</label>
-      <input type="text" id="location" placeholder="Enter address">
-      <button class="btn btn-secondary" onclick="searchAddress()">Show on Map</button>
-    </div>
-
-    <div id="map"></div>
-
-    <div class="input-group">
-      <label>LAANC Authorization</label>
-      <input type="text" id="laanc" placeholder="Authorization number (optional)">
-    </div>
-
-    <div class="input-group">
-      <label>Flight Purpose</label>
-      <textarea id="purpose" placeholder="Describe flight purpose..."></textarea>
-    </div>
-
-    <div class="card">
-      <h3>Weather Conditions</h3>
-      <button class="btn btn-secondary" onclick="getWeather()">Refresh Weather</button>
-      <div class="weather-info" id="weatherInfo">
-        <div class="weather-item">
-          <div class="label">Temperature</div>
-          <div class="value" id="temp">--°F</div>
-        </div>
-        <div class="weather-item">
-          <div class="label">Wind Speed</div>
-          <div class="value" id="wind">-- mph</div>
-        </div>
-        <div class="weather-item">
-          <div class="label">Humidity</div>
-          <div class="value" id="humidity">--%</div>
-        </div>
-        <div class="weather-item">
-          <div class="label">Conditions</div>
-          <div class="value" id="conditions">--</div>
-        </div>
-      </div>
-    </div>
-
-  </div>
+<div class="card">
+<h3>Weather</h3>
+<div id="weather">Waiting for GPS…</div>
 </div>
 
-<!-- HISTORY TAB -->
-<div id="history-content" class="content">
-  <div class="card">
-    <h3>Flight History</h3>
-    <button class="btn btn-primary" onclick="syncOfflineFlights()">Sync Offline Flights</button>
-    <button class="btn btn-secondary" onclick="exportFlights()">Export CSV</button>
-  </div>
-  <div id="historyList"></div>
+<div class="card">
+<h3>Flight History</h3>
+<div id="history"></div>
 </div>
 
-<!-- MAINTENANCE TAB -->
-<div id="maintenance-content" class="content">
-  <div class="card">
-    <h3>Add Maintenance Log</h3>
-    <div class="input-group">
-      <label>Drone</label>
-      <select id="maintDrone">
-        <option value="">Select Drone</option>
-        <option value="DJI Mavic PT 30T #1">DJI Mavic PT 30T #1</option>
-        <option value="DJI Mavic 3T #1.2">DJI Mavic 3T #1.2</option>
-        <option value="DJI Mavic 3T #2.1">DJI Mavic 3T #2.1</option>
-        <option value="DJI Mavic 3T #3">DJI Mavic 3T #3</option>
-        <option value="DJI Mavic 3E #1">DJI Mavic 3E #1</option>
-        <option value="DJI Mini 3 Pro #1">DJI Mini 3 Pro #1</option>
-        <option value="DJI Mini 3 Pro #2">DJI Mini 3 Pro #2</option>
-        <option value="DJI Avata Patrol #1">DJI Avata Patrol #1</option>
-        <option value="Autel 640T V3 #1">Autel 640T V3 #1</option>
-        <option value="Skydio X2E">Skydio X2E</option>
-        <option value="DJI Matrice 4T-1">DJI Matrice 4T-1</option>
-        <option value="DJI Matrice 4T-2">DJI Matrice 4T-2</option>
-        <option value="DJI Matrice 4T-3">DJI Matrice 4T-3</option>
-        <option value="Skyrover S1">Skyrover S1</option>
-        <option value="Skydio X10-1">Skydio X10-1</option>
-        <option value="Skydio X10-2.2">Skydio X10-2.2</option>
-        <option value="Skydio X10-3">Skydio X10-3</option>
-        <option value="Skydio X10-4">Skydio X10-4</option>
-        <option value="Skydio X10-5">Skydio X10-5</option>
-      </select>
-    </div>
-    <div class="input-group">
-      <label>Maintenance Type</label>
-      <select id="maintType">
-        <option value="Inspection">Pre-flight Inspection</option>
-        <option value="Battery">Battery Maintenance</option>
-        <option value="Propeller">Propeller Replacement</option>
-        <option value="Firmware">Firmware Update</option>
-        <option value="Calibration">Sensor Calibration</option>
-        <option value="Cleaning">Cleaning</option>
-        <option value="Repair">Repair</option>
-        <option value="Other">Other</option>
-      </select>
-    </div>
-    <div class="input-group">
-      <label>Notes</label>
-      <textarea id="maintNotes" placeholder="Maintenance details..."></textarea>
-    </div>
-    <button class="btn btn-primary" onclick="addMaintenance()">Log Maintenance</button>
-  </div>
-  <div id="maintenanceList"></div>
-</div>
+</section>
 
-<!-- Firebase and Google Maps JS -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
+<script>
+/* ---------------- STATE ---------------- */
+let timerInterval = null;
+let elapsed = 0;
+let startTime = null;
+let map, marker;
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// Global state
-const state = {
-  isOnline: navigator.onLine,
-  flights: [],
-  maintenance: [],
-  currentFlight: null,
-  timerInterval: null,
-  startTime: null,
-  map: null,
-  geocoder: null,
-  marker: null
-};
-
-// Connection status
-function updateConnectionStatus(){
-  const el=document.getElementById('connectionStatus');
-  el.innerHTML=`<span class="status-indicator ${state.isOnline?'status-online':'status-offline'}"></span>${state.isOnline?'Online':'Offline'}`;
-}
-window.addEventListener('online',()=>{state.isOnline=true;updateConnectionStatus();syncOfflineFlights();});
-window.addEventListener('offline',()=>{state.isOnline=false;updateConnectionStatus();});
-updateConnectionStatus();
-
-// Timer functions
-function pad(n){return n.toString().padStart(2,'0');}
+/* ---------------- TIMER ---------------- */
 function updateTimer(){
-  if(!state.startTime)return;
-  const sec=Math.floor((Date.now()-state.startTime)/1000);
-  const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), s=sec%60;
-  document.getElementById('timer').textContent=`${pad(h)}:${pad(m)}:${pad(s)}`;
-}
-function startFlight(){
-  if(state.startTime) return;
-  state.startTime=Date.now();
-  state.timerInterval=setInterval(updateTimer,1000);
-}
-function stopFlight(){
-  clearInterval(state.timerInterval);
-  state.timerInterval=null;
-}
-function resetFlight(){
-  clearInterval(state.timerInterval);
-  state.timerInterval=null;
-  state.startTime=null;
-  document.getElementById('timer').textContent='00:00:00';
+  const h = String(Math.floor(elapsed/3600)).padStart(2,'0');
+  const m = String(Math.floor((elapsed%3600)/60)).padStart(2,'0');
+  const s = String(elapsed%60).padStart(2,'0');
+  timer.textContent = `${h}:${m}:${s}`;
 }
 
-// Tab switch
-function switchTab(tab){
-  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-  document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
-  document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
-  document.getElementById(`${tab}-content`).classList.add('active');
+function startTimer(){
+  if(timerInterval) return;
+  startTime = new Date().toISOString();
+  timerInterval = setInterval(()=>{ elapsed++; updateTimer(); },1000);
 }
 
-// Initialize Map
-function initMap(){
-  state.map=L.map('map').setView([37.7749,-122.4194],13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-    maxZoom:19
-  }).addTo(state.map);
-  state.geocoder = new google.maps.Geocoder();
+function stopTimer(){
+  clearInterval(timerInterval);
+  timerInterval = null;
 }
 
-// Search address
-function searchAddress(){
-  const addr=document.getElementById('location').value;
-  if(!addr) return;
-  state.geocoder.geocode({address:addr},(results,status)=>{
-    if(status==='OK'){
-      const loc=[results[0].geometry.location.lat(),results[0].geometry.location.lng()];
-      if(state.marker) state.map.removeLayer(state.marker);
-      state.marker=L.marker(loc).addTo(state.map).bindPopup(results[0].formatted_address).openPopup();
-      state.map.setView(loc,15);
-    } else {
-      alert('Address not found: '+status);
-    }
-  });
+function resetTimer(){
+  stopTimer();
+  elapsed = 0;
+  updateTimer();
 }
 
-// Weather
-function getWeather(){
-  if(!navigator.geolocation) return alert('Geolocation not supported');
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const lat=pos.coords.latitude;
-    const lon=pos.coords.longitude;
-    fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=imperial&appid=AIzaSyB76-DcQwEsU4Q1S-aHKf11-VceYQnu5Zw`)
-      .then(res=>res.json())
-      .then(data=>{
-        document.getElementById('temp').textContent=Math.round(data.main.temp)+'°F';
-        document.getElementById('wind').textContent=Math.round(data.wind.speed)+' mph';
-        document.getElementById('humidity').textContent=data.main.humidity+'%';
-        document.getElementById('conditions').textContent=data.weather[0].main;
-      });
-  });
+/* ---------------- MAP + GPS ---------------- */
+map = L.map('map').setView([0,0],2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+navigator.geolocation.getCurrentPosition(pos=>{
+  const {latitude, longitude} = pos.coords;
+  map.setView([latitude,longitude],16);
+  marker = L.marker([latitude,longitude]).addTo(map);
+  reverseGeocode(latitude, longitude);
+  loadWeather(latitude, longitude);
+});
+
+/* ---------------- GOOGLE GEOCODING ---------------- */
+const GOOGLE_KEY = "AIzaSyB76-DcQwEsU4Q1S-aHKf11-VceYQnu5Zw";
+
+function reverseGeocode(lat,lng){
+fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_KEY}`)
+.then(r=>r.json())
+.then(d=>{
+ if(d.results[0]) address.value = d.results[0].formatted_address;
+});
 }
 
-// Maintenance
-function addMaintenance(){
-  const drone=document.getElementById('maintDrone').value;
-  const type=document.getElementById('maintType').value;
-  const notes=document.getElementById('maintNotes').value;
-  if(!drone||!type) return alert('Select drone and type');
-  let logs=JSON.parse(localStorage.getItem('maintenance')||'[]');
-  logs.unshift({drone,type,notes,time:Date.now()});
-  localStorage.setItem('maintenance',JSON.stringify(logs));
-  loadMaintenance();
-}
-function loadMaintenance(){
-  const logs=JSON.parse(localStorage.getItem('maintenance')||'[]');
-  const container=document.getElementById('maintenanceList'); container.innerHTML='';
-  if(!logs.length){ container.innerHTML='<p class="empty-state">No maintenance yet</p>'; return;}
-  logs.forEach(log=>{
-    const div=document.createElement('div'); div.className='maintenance-item';
-    div.innerHTML=`<h4>${log.drone}</h4><p><strong>${log.type}</strong></p><p>${log.notes}</p>`;
-    container.appendChild(div);
-  });
+/* ---------------- WEATHER ---------------- */
+function loadWeather(lat,lng){
+fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m`)
+.then(r=>r.json())
+.then(d=>{
+ weather.innerHTML =
+ `Temp: ${d.current.temperature_2m}°F<br>
+ Wind: ${d.current.wind_speed_10m} mph`;
+});
 }
 
-// Flight history
-function loadFlights(){
-  const flights=JSON.parse(localStorage.getItem('flights')||'[]');
-  const container=document.getElementById('historyList'); container.innerHTML='';
-  if(!flights.length){ container.innerHTML='<p class="empty-state">No flights yet</p>'; return;}
-  flights.forEach((f,i)=>{
-    const div=document.createElement('div'); div.className='flight-log-item offline';
-    div.innerHTML=`<h4>${f.drone}</h4>
-<p><strong>Purpose:</strong> ${f.purpose}</p>
-<p><strong>Location:</strong> ${f.location}</p>
-<p><strong>Duration:</strong> ${Math.floor(f.duration/60)} min ${f.duration%60} sec</p>
-<button class="btn btn-reset" onclick="deleteFlight(${i})">Delete Flight</button>`;
-    container.appendChild(div);
-  });
+/* ---------------- STORAGE ---------------- */
+function saveFlight(){
+ if(!drone.value) return alert("Select drone");
+ const flights = JSON.parse(localStorage.getItem("flights")||"[]");
+ flights.unshift({
+  drone: drone.value,
+  address: address.value,
+  purpose: purpose.value,
+  duration: timer.textContent,
+  start: startTime,
+  end: new Date().toISOString()
+ });
+ localStorage.setItem("flights", JSON.stringify(flights));
+ resetTimer();
+ renderHistory();
 }
+
 function deleteFlight(i){
-  let flights=JSON.parse(localStorage.getItem('flights')||'[]'); flights.splice(i,1);
-  localStorage.setItem('flights',JSON.stringify(flights));
-  loadFlights();
+ const flights = JSON.parse(localStorage.getItem("flights"));
+ flights.splice(i,1);
+ localStorage.setItem("flights", JSON.stringify(flights));
+ renderHistory();
 }
 
-// Offline sync
-function syncOfflineFlights(){
-  alert('Sync function not implemented in this demo.');
+function renderHistory(){
+ const flights = JSON.parse(localStorage.getItem("flights")||"[]");
+ history.innerHTML = flights.map((f,i)=>`
+  <div class="flight">
+   <b>${f.drone}</b><br>
+   ${f.address}<br>
+   Duration: ${f.duration}<br>
+   <button onclick="deleteFlight(${i})">Delete</button>
+  </div>
+ `).join("") || "No flights yet";
 }
 
-// Export CSV
-function exportFlights(){
-  const flights=JSON.parse(localStorage.getItem('flights')||'[]');
-  let csv='Drone,Purpose,Location,Duration\n';
-  flights.forEach(f=>{csv+=`${f.drone},${f.purpose},${f.location},${f.duration}\n`;});
-  const blob=new Blob([csv],{type:'text/csv'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='flights.csv'; a.click();
-}
-
-// Initialize
-initMap(); loadFlights(); loadMaintenance(); getWeather();
-
-// PWA Service Worker
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').catch(e=>console.log(e));
-}
+renderHistory();
+updateTimer();
 </script>
 
-<!-- Google Maps API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB76-DcQwEsU4Q1S-aHKf11-VceYQnu5Zw&libraries=places"></script>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </body>
 </html>
