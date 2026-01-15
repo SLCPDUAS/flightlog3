@@ -2,49 +2,62 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flight Tracker</title>
-<meta name="description" content="Randy Neal Flight Tracker PWA">
-<meta name="theme-color" content="#667eea">
-<link rel="manifest" href="#manifest">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Flight Tracker PWA</title>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.5/dist/leaflet.css"/>
 
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:#000; color:#fff; }
-.status-bar { height:44px; display:flex; align-items:center; justify-content:center; border-bottom:1px solid #333; background:rgba(0,0,0,0.9);}
-.status-indicator { display:inline-block; width:10px;height:10px;border-radius:50%;margin-right:8px;}
-.status-online { background:#34c759; } .status-offline { background:#ff9500; }
-.header { text-align:center; padding:20px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);}
-.header h1 { font-size:1.4em; } .header p { font-size:0.85em; opacity:0.9;}
-.tabs { display:flex; background:#1c1c1e; border-bottom:1px solid #333; }
-.tab { flex:1; padding:15px; text-align:center; cursor:pointer; color:#8e8e93; border:none; background:none; transition:0.3s;}
-.tab.active { color:#fff; border-bottom:2px solid #667eea;}
-.content { padding:20px; display:none; } .content.active { display:block;}
-.card { background:#1c1c1e; border-radius:12px; padding:15px; margin-bottom:15px; border:1px solid #2c2c2e;}
-.card h3 { color:#667eea; margin-bottom:10px;}
-.input-group { margin-bottom:15px;}
-.input-group label { display:block; color:#8e8e93; font-size:0.85em; margin-bottom:5px;}
-.input-group input, .input-group select, .input-group textarea { width:100%; padding:12px; background:#2c2c2e; border:1px solid #3a3a3c; border-radius:8px; color:#fff; font-size:16px;}
-.input-group textarea { min-height:60px; resize:vertical;}
-.btn { width:100%; padding:15px; border:none; border-radius:10px; font-size:1em; font-weight:600; cursor:pointer; margin-top:10px;}
-.btn-start { background:#34c759; color:#fff;} .btn-stop { background:#ff3b30;color:#fff;}
-.btn-primary { background:#667eea; color:#fff;} .btn-secondary { background:#3a3a3c;color:#fff;}
-.timer { font-size:3em; text-align:center; font-weight:300; padding:30px 0; font-variant-numeric:tabular-nums;}
-.empty-state { text-align:center; padding:40px 20px; color:#8e8e93;}
-#map { height:300px; width:100%; margin-top:10px; border-radius:12px; border:1px solid #2c2c2e;}
-.flight-log-item, .maintenance-item { background:#2c2c2e; padding:15px; border-radius:8px; margin-bottom:10px;}
-.flight-log-item h4, .maintenance-item h4 { color:#667eea; margin-bottom:8px;}
-.flight-log-item p, .maintenance-item p { color:#8e8e93; font-size:0.85em; margin:3px 0;}
-.flight-log-item.offline { border-left:4px solid #ff9500; }
-.status-indicator { display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;}
-.badge { display:inline-block; padding:4px 8px; border-radius:4px; font-size:0.75em; font-weight:600; margin-left:8px;}
-.badge-offline { background:#ff9500; color:#000; } .badge-synced { background:#34c759; color:#000;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:sans-serif;background:#000;color:#fff;overflow-x:hidden;}
+.status-bar{height:44px;background:#111;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #333;}
+.status-indicator{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;}
+.status-online{background:#34c759;}
+.status-offline{background:#ff9500;}
+.header{padding:15px;text-align:center;background:linear-gradient(135deg,#667eea,#764ba2);}
+.header h1{font-size:1.4em;}
+.tabs{display:flex;background:#111;border-bottom:1px solid #333;}
+.tab{flex:1;padding:12px;text-align:center;cursor:pointer;color:#8e8e93;}
+.tab.active{color:#fff;border-bottom:2px solid #667eea;}
+.content{padding:15px;display:none;}
+.content.active{display:block;}
+.card{background:#1c1c1e;padding:15px;margin-bottom:15px;border-radius:12px;border:1px solid #2c2c2e;}
+.card h3{color:#667eea;margin-bottom:10px;}
+.input-group{margin-bottom:12px;}
+.input-group label{display:block;color:#8e8e93;font-size:0.85em;margin-bottom:4px;}
+.input-group input,.input-group select,.input-group textarea{width:100%;padding:10px;background:#2c2c2e;border:1px solid #3a3a3c;border-radius:8px;color:#fff;}
+.input-group textarea{resize:vertical;min-height:60px;}
+.btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:1em;font-weight:600;cursor:pointer;margin-top:5px;}
+.btn-start{background:#34c759;color:#fff;}
+.btn-stop{background:#ff3b30;color:#fff;}
+.btn-reset{background:#8e8e93;color:#000;}
+.btn-primary{background:#667eea;color:#fff;}
+.btn-secondary{background:#3a3a3c;color:#fff;}
+.timer{text-align:center;font-size:2.5em;padding:20px 0;font-variant-numeric:tabular-nums;}
+#map{height:250px;border-radius:12px;margin-top:10px;}
+.weather-info{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px;}
+.weather-item{background:#2c2c2e;padding:10px;border-radius:8px;text-align:center;}
+.weather-item .label{color:#8e8e93;font-size:0.8em;margin-bottom:4px;}
+.weather-item .value{font-size:1.2em;font-weight:600;}
+.flight-log-item{background:#2c2c2e;padding:10px;border-radius:8px;margin-bottom:10px;border-left:4px solid #667eea;}
+.flight-log-item.offline{border-left-color:#ff9500;}
+.flight-log-item h4{margin-bottom:5px;color:#667eea;}
+.flight-log-item p{color:#8e8e93;font-size:0.85em;}
+.maintenance-item{background:#2c2c2e;padding:10px;border-radius:8px;margin-bottom:10px;}
+.maintenance-item h4{color:#fff;margin-bottom:4px;}
+.maintenance-item p{color:#8e8e93;font-size:0.85em;}
 </style>
 </head>
 <body>
 
-<div class="status-bar" id="connectionStatus"><span class="status-indicator status-online"></span>Online</div>
-<div class="header"><h1>✈️ Flight Tracker</h1><p>Randy Neal | License #52082259</p></div>
+<div class="status-bar">
+  <span id="connectionStatus"><span class="status-indicator status-online"></span>Online</span>
+</div>
+
+<div class="header">
+  <h1>✈️ Flight Tracker</h1>
+</div>
 
 <div class="tabs">
   <button class="tab active" onclick="switchTab('flight')">Flight</button>
@@ -52,59 +65,86 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
   <button class="tab" onclick="switchTab('maintenance')">Maintenance</button>
 </div>
 
-<!-- FLIGHT TAB -->
+<!-- Flight Tab -->
 <div id="flight-content" class="content active">
 
-  <div class="card">
-    <h3>Flight Timer</h3>
-    <div class="timer" id="timer">00:00:00</div>
-    <button id="startStopBtn" class="btn btn-start" onclick="toggleFlight()">Start Flight</button>
-  </div>
+<div class="card">
+  <h3>Flight Timer</h3>
+  <div class="timer" id="timer">00:00:00</div>
+  <button class="btn btn-start" onclick="startFlight()">Start</button>
+  <button class="btn btn-stop" onclick="stopFlight()">Stop</button>
+  <button class="btn btn-reset" onclick="resetTimer()">Reset</button>
+</div>
 
-  <div class="card">
-    <h3>Flight Details</h3>
-    <div class="input-group">
-      <label>Drone Type</label>
-      <select id="droneType">
-        <option value="">Select Drone</option>
-        <option>DJI Mavic PT 30T #1</option>
-        <option>DJI Mavic 3T #1.2</option>
-        <option>DJI Mavic 3T #2.1</option>
-        <option>DJI Mavic 3T #3</option>
-        <option>DJI Mavic 3E #1</option>
-        <option>DJI Mini 3 Pro #1</option>
-        <option>DJI Mini 3 Pro #2</option>
-        <option>DJI Avata Patrol #1</option>
-        <option>Autel 640T V3 #1</option>
-        <option>Skydio X2E</option>
-        <option>DJI Matrice 4T-1</option>
-        <option>DJI Matrice 4T-2</option>
-        <option>DJI Matrice 4T-3</option>
-        <option>Skyrover S1</option>
-        <option>Skydio X10-1</option>
-        <option>Skydio X10-2.2</option>
-        <option>Skydio X10-3</option>
-        <option>Skydio X10-4</option>
-        <option>Skydio X10-5</option>
-      </select>
-    </div>
-    <div class="input-group">
-      <label>Location</label>
-      <input type="text" id="location" placeholder="Enter location">
-    </div>
-    <div class="input-group">
-      <label>LAANC Authorization</label>
-      <input type="text" id="laanc" placeholder="Authorization number (optional)">
-    </div>
-    <div class="input-group">
-      <label>Flight Purpose</label>
-      <textarea id="purpose" placeholder="Describe flight purpose..."></textarea>
-    </div>
-    <div id="map"></div>
+<div class="card">
+  <h3>Flight Details</h3>
+  <div class="input-group">
+    <label>Drone Type</label>
+    <select id="droneType">
+      <option value="">Select Drone</option>
+      <option value="DJI Mavic PT 30T #1">DJI Mavic PT 30T #1</option>
+      <option value="DJI Mavic 3T #1.2">DJI Mavic 3T #1.2</option>
+      <option value="DJI Mavic 3T #2.1">DJI Mavic 3T #2.1</option>
+      <option value="DJI Mavic 3T #3">DJI Mavic 3T #3</option>
+      <option value="DJI Mavic 3E #1">DJI Mavic 3E #1</option>
+      <option value="DJI Mini 3 Pro #1">DJI Mini 3 Pro #1</option>
+      <option value="DJI Mini 3 Pro #2">DJI Mini 3 Pro #2</option>
+      <option value="DJI Avata Patrol #1">DJI Avata Patrol #1</option>
+      <option value="Autel 640T V3 #1">Autel 640T V3 #1</option>
+      <option value="Skydio X2E">Skydio X2E</option>
+      <option value="Skyrover S1">Skyrover S1</option>
+      <option value="Skydio X10-1">Skydio X10-1</option>
+      <option value="Skydio X10-2.2">Skydio X10-2.2</option>
+      <option value="Skydio X10-3">Skydio X10-3</option>
+      <option value="Skydio X10-4">Skydio X10-4</option>
+      <option value="Skydio X10-5">Skydio X10-5</option>
+      <option value="DJI Matrice 4T-1">DJI Matrice 4T-1</option>
+      <option value="DJI Matrice 4T-2">DJI Matrice 4T-2</option>
+      <option value="DJI Matrice 4T-3">DJI Matrice 4T-3</option>
+    </select>
+  </div>
+  <div class="input-group">
+    <label>Location / Address</label>
+    <input type="text" id="location" placeholder="Enter address">
+    <button class="btn btn-primary" onclick="updateMapFromAddress()">Locate Address</button>
+  </div>
+  <div id="map"></div>
+  <div class="input-group">
+    <label>LAANC Authorization</label>
+    <input type="text" id="laanc">
+  </div>
+  <div class="input-group">
+    <label>Flight Purpose</label>
+    <textarea id="purpose"></textarea>
   </div>
 </div>
 
-<!-- HISTORY TAB -->
+<div class="card">
+  <h3>Weather</h3>
+  <button class="btn btn-secondary" onclick="getWeather()">Refresh Weather</button>
+  <div class="weather-info" id="weatherInfo">
+    <div class="weather-item">
+      <div class="label">Temp</div>
+      <div class="value" id="temp">--°C</div>
+    </div>
+    <div class="weather-item">
+      <div class="label">Wind</div>
+      <div class="value" id="wind">-- m/s</div>
+    </div>
+    <div class="weather-item">
+      <div class="label">Humidity</div>
+      <div class="value" id="humidity">--%</div>
+    </div>
+    <div class="weather-item">
+      <div class="label">Condition</div>
+      <div class="value" id="conditions">--</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- History Tab -->
 <div id="history-content" class="content">
   <div class="card">
     <h3>Flight History</h3>
@@ -114,155 +154,129 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif
   <div id="historyList"></div>
 </div>
 
-<!-- MAINTENANCE TAB -->
+<!-- Maintenance Tab -->
 <div id="maintenance-content" class="content">
   <div class="card">
-    <h3>Add Maintenance Log</h3>
+    <h3>Add Maintenance</h3>
     <div class="input-group">
       <label>Drone</label>
       <select id="maintDrone">
         <option value="">Select Drone</option>
-        <option>DJI Mavic PT 30T #1</option>
-        <option>DJI Mavic 3T #1.2</option>
-        <option>DJI Mavic 3T #2.1</option>
-        <option>DJI Mavic 3T #3</option>
-        <option>DJI Mavic 3E #1</option>
-        <option>DJI Mini 3 Pro #1</option>
-        <option>DJI Mini 3 Pro #2</option>
-        <option>DJI Avata Patrol #1</option>
-        <option>Autel 640T V3 #1</option>
-        <option>Skydio X2E</option>
-        <option>DJI Matrice 4T-1</option>
-        <option>DJI Matrice 4T-2</option>
-        <option>DJI Matrice 4T-3</option>
-        <option>Skyrover S1</option>
-        <option>Skydio X10-1</option>
-        <option>Skydio X10-2.2</option>
-        <option>Skydio X10-3</option>
-        <option>Skydio X10-4</option>
-        <option>Skydio X10-5</option>
+        <option value="Skyrover S1">Skyrover S1</option>
+        <option value="Skydio X10-1">Skydio X10-1</option>
+        <option value="Skydio X10-2.2">Skydio X10-2.2</option>
+        <option value="Skydio X10-3">Skydio X10-3</option>
+        <option value="Skydio X10-4">Skydio X10-4</option>
+        <option value="Skydio X10-5">Skydio X10-5</option>
       </select>
     </div>
     <div class="input-group">
-      <label>Maintenance Type</label>
+      <label>Type</label>
       <select id="maintType">
-        <option>Inspection</option>
-        <option>Battery</option>
-        <option>Propeller</option>
-        <option>Firmware</option>
-        <option>Calibration</option>
-        <option>Cleaning</option>
-        <option>Repair</option>
-        <option>Other</option>
+        <option value="Inspection">Inspection</option>
+        <option value="Battery">Battery</option>
+        <option value="Propeller">Propeller</option>
+        <option value="Firmware">Firmware</option>
+        <option value="Calibration">Calibration</option>
+        <option value="Cleaning">Cleaning</option>
+        <option value="Repair">Repair</option>
+        <option value="Other">Other</option>
       </select>
     </div>
     <div class="input-group">
       <label>Notes</label>
-      <textarea id="maintNotes" placeholder="Maintenance details..."></textarea>
+      <textarea id="maintNotes"></textarea>
     </div>
     <button class="btn btn-primary" onclick="addMaintenance()">Log Maintenance</button>
   </div>
   <div id="maintenanceList"></div>
 </div>
 
-<!-- SCRIPTS -->
-<script type="module">
-// Firebase initialization (replace YOUR_* values)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js";
-const firebaseConfig = {
-  apiKey:"YOUR_API_KEY",
-  authDomain:"YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:"YOUR_PROJECT_ID",
-  storageBucket:"YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId:"YOUR_SENDER_ID",
-  appId:"YOUR_APP_ID"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.5/dist/leaflet.js"></script>
 
-// GLOBAL STATE
-window.appState = { flights:[], maintenance:[], currentFlight:null, startTime:null, timerInterval:null, isOnline:navigator.onLine };
+<script>
+// --- TABS ---
+function switchTab(tab){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.content').forEach(c=>c.classList.remove('active'));
+document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active'); document.getElementById(tab+'-content').classList.add('active');}
 
-// CONNECTION STATUS
-function updateConnectionStatus() {
-  const status = document.getElementById('connectionStatus');
-  if(window.appState.isOnline) status.innerHTML='<span class="status-indicator status-online"></span>Online';
-  else status.innerHTML='<span class="status-indicator status-offline"></span>Offline';
+// --- TIMER ---
+let timerInterval=null, startTime=null;
+function pad(n){return n.toString().padStart(2,'0');}
+function updateTimer(){
+  if(!startTime) return;
+  let diff=Date.now()-startTime;
+  const h=Math.floor(diff/3600000); diff%=3600000;
+  const m=Math.floor(diff/60000); diff%=60000;
+  const s=Math.floor(diff/1000);
+  document.getElementById('timer').textContent=`${pad(h)}:${pad(m)}:${pad(s)}`;
 }
-window.addEventListener('online', ()=>{window.appState.isOnline=true;updateConnectionStatus();syncOfflineFlights();});
-window.addEventListener('offline', ()=>{window.appState.isOnline=false;updateConnectionStatus();});
+function startFlight(){ if(startTime) return; startTime=Date.now(); timerInterval=setInterval(updateTimer,1000); }
+function stopFlight(){ clearInterval(timerInterval); timerInterval=null; startTime=null; document.getElementById('timer').textContent="00:00:00"; }
+function resetTimer(){ clearInterval(timerInterval); timerInterval=null; startTime=null; document.getElementById('timer').textContent="00:00:00"; }
+
+// --- MAP ---
+let map = L.map('map').setView([37.7749,-122.4194],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+let path=[]; let polyline=L.polyline(path,{color:'#667eea'}).addTo(map); let marker=null;
+navigator.geolocation.watchPosition(pos=>{
+  const lat=pos.coords.latitude, lon=pos.coords.longitude;
+  path.push([lat,lon]); polyline.setLatLngs(path); map.setView([lat,lon]); 
+  if(marker) marker.setLatLng([lat,lon]); else marker=L.marker([lat,lon]).addTo(map);
+},{enableHighAccuracy:true});
+async function updateMapFromAddress(){
+  const addr=document.getElementById('location').value;
+  if(!addr) return;
+  const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
+  const data=await res.json();
+  if(data.length>0){ const lat=parseFloat(data[0].lat), lon=parseFloat(data[0].lon); map.setView([lat,lon],15); if(marker) marker.setLatLng([lat,lon]); else marker=L.marker([lat,lon]).addTo(map); path.push([lat,lon]); polyline.setLatLngs(path); }
+}
+
+// --- WEATHER ---
+async function getWeather(){
+  if(!navigator.geolocation) return alert('No geolocation');
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=pos.coords.latitude, lon=pos.coords.longitude;
+    try{
+      const res=await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=YOUR_OPENWEATHER_KEY&units=metric`);
+      const w=await res.json();
+      document.getElementById('temp').textContent=`${w.main.temp}°C`;
+      document.getElementById('wind').textContent=`${w.wind.speed} m/s`;
+      document.getElementById('humidity').textContent=`${w.main.humidity}%`;
+      document.getElementById('conditions').textContent=w.weather[0].description;
+      localStorage.setItem('lastWeather',JSON.stringify(w));
+    }catch(e){ alert('Weather fetch failed'); }
+  },err=>{
+    const w=JSON.parse(localStorage.getItem('lastWeather')||'{}');
+    if(w.weather) { document.getElementById('temp').textContent=`${w.main.temp}°C`; document.getElementById('wind').textContent=`${w.wind.speed} m/s`; document.getElementById('humidity').textContent=`${w.main.humidity}%`; document.getElementById('conditions').textContent=w.weather[0].description; }
+    else alert('Cannot get location');
+  });
+}
+
+// --- OFFLINE FLIGHTS ---
+function loadOfflineData(){ return JSON.parse(localStorage.getItem('offlineFlights')||'[]'); }
+function saveOfflineFlight(f){ const arr=loadOfflineData(); arr.push(f); localStorage.setItem('offlineFlights',JSON.stringify(arr)); }
+function syncOfflineFlights(){ localStorage.removeItem('offlineFlights'); alert('Offline flights synced!'); }
+
+// --- CSV EXPORT ---
+function exportFlights(){ const arr=loadOfflineData(); if(arr.length===0){alert('No flights'); return;} const csv=['Drone,Location,Start,End,Purpose,LAANC']; arr.forEach(f=>{csv.push([f.droneType,f.location,f.startTime,f.endTime,f.purpose,f.laanc].map(v=>`"${v||''}"`).join(','));}); const blob=new Blob([csv.join('\n')],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='flights.csv'; a.click(); URL.revokeObjectURL(url); }
+
+// --- MAINTENANCE ---
+function addMaintenance(){ const d=document.getElementById('maintDrone').value, t=document.getElementById('maintType').value, n=document.getElementById('maintNotes').value; if(!d||!t) return alert('Select drone & type'); const m={drone:d,type:t,notes:n,date:new Date().toISOString()}; let arr=JSON.parse(localStorage.getItem('maintenance')||'[]'); arr.push(m); localStorage.setItem('maintenance',JSON.stringify(arr)); loadMaintenance(); }
+function loadMaintenance(){ const arr=JSON.parse(localStorage.getItem('maintenance')||'[]'); const el=document.getElementById('maintenanceList'); el.innerHTML=''; arr.forEach(m=>{el.innerHTML+=`<div class="maintenance-item"><h4>${m.drone} - ${m.type}</h4><p>${m.notes}</p><p>${new Date(m.date).toLocaleString()}</p></div>`;}); }
+loadMaintenance();
+
+// --- INITIAL CONNECTION STATUS ---
+function updateConnectionStatus(){ const statusEl=document.getElementById('connectionStatus'); statusEl.innerHTML= navigator.onLine?'<span class="status-indicator status-online"></span>Online':'<span class="status-indicator status-offline"></span>Offline';}
+window.addEventListener('online',updateConnectionStatus); window.addEventListener('offline',updateConnectionStatus);
 updateConnectionStatus();
-
-// FLIGHT TIMER FUNCTIONS
-function pad(num){return num.toString().padStart(2,'0');}
-window.updateTimer=function(){if(!window.appState.startTime)return; let diff=Date.now()-window.appState.startTime; const h=Math.floor(diff/3600000); diff%=3600000; const m=Math.floor(diff/60000); diff%=60000; const s=Math.floor(diff/1000); document.getElementById('timer').textContent=`${pad(h)}:${pad(m)}:${pad(s)}`;}
-window.startFlight=function(){const drone=document.getElementById('droneType').value; const loc=document.getElementById('location').value; if(!drone||!loc){alert("Select drone and location"); return;} window.appState.startTime=Date.now(); window.appState.currentFlight={droneType:drone, location:loc, laanc:document.getElementById('laanc').value, purpose:document.getElementById('purpose').value, startTime:new Date().toISOString()}; window.appState.timerInterval=setInterval(window.updateTimer,1000); const btn=document.getElementById('startStopBtn'); btn.textContent="Stop Flight"; btn.className="btn btn-stop";}
-window.stopFlight=function(){if(!window.appState.currentFlight)return; clearInterval(window.appState.timerInterval); const f=window.appState.currentFlight; f.endTime=new Date().toISOString(); if(window.appState.isOnline){try{addDoc(collection(db,"flights"),f);}catch(e){saveOfflineFlight(f);}} else saveOfflineFlight(f); document.getElementById('timer').textContent="00:00:00"; window.appState.startTime=null; window.appState.currentFlight=null; window.appState.timerInterval=null; const btn=document.getElementById('startStopBtn'); btn.textContent="Start Flight"; btn.className="btn btn-start"; loadFlights();}
-window.toggleFlight=function(){if(window.appState.currentFlight) stopFlight(); else startFlight();}
-
-// OFFLINE FLIGHT STORAGE
-function loadOfflineData(){return JSON.parse(localStorage.getItem('offlineFlights')||'[]');}
-function saveOfflineFlight(flight){const arr=loadOfflineData(); arr.push(flight); localStorage.setItem('offlineFlights',JSON.stringify(arr));}
-window.syncOfflineFlights=async function(){if(!window.appState.isOnline){alert('Cannot sync offline'); return;} const offline=loadOfflineData(); if(offline.length===0){alert('No offline flights'); return;} for(const f of offline){await addDoc(collection(db,"flights"),f);} localStorage.removeItem('offlineFlights'); alert(`Synced ${offline.length} offline flight(s)`); loadFlights();}
-
-// LOAD FLIGHTS
-function renderFlights(arr){const c=document.getElementById('historyList'); if(arr.length===0){c.innerHTML='<div class="empty-state">No flights logged yet</div>'; return;} c.innerHTML=arr.map(f=>`<div class="flight-log-item ${f.offline?'offline':''}"><h4>${f.droneType} ${f.offline?'<span class="badge badge-offline">OFFLINE</span>':''}</h4><p>Location: ${f.location}</p><p>Duration: ${f.duration||'N/A'}</p><p>Date: ${new Date(f.startTime).toLocaleString()}</p></div>`).join('');}
-function loadFlights(){const offline=loadOfflineData().map(f=>({...f,offline:true})); if(window.appState.isOnline){onSnapshot(query(collection(db,"flights"),orderBy("startTime","desc")),snap=>{window.appState.flights=snap.docs.map(d=>({...d.data(),id:d.id})); renderFlights([...offline,...window.appState.flights]);});} else renderFlights(offline);}
-
-// MAINTENANCE
-window.addMaintenance=function(){const drone=document.getElementById('maintDrone').value; const type=document.getElementById('maintType').value; const notes=document.getElementById('maintNotes').value; if(!drone||!notes){alert('Fill all fields'); return;} const r={drone,type,notes,date:new Date().toISOString()}; if(window.appState.isOnline){addDoc(collection(db,"maintenance"),r).then(()=>alert('Maintenance logged')).catch(e=>alert('Error:'+e.message));} else {const arr=JSON.parse(localStorage.getItem('offlineMaintenance')||'[]'); arr.push(r); localStorage.setItem('offlineMaintenance',JSON.stringify(arr)); alert('Maintenance saved offline');} document.getElementById('maintDrone').value=''; document.getElementById('maintNotes').value=''; loadMaintenance();}
-function renderMaintenance(arr){const c=document.getElementById('maintenanceList'); if(arr.length===0){c.innerHTML='<div class="empty-state">No maintenance logs yet</div>'; return;} c.innerHTML=arr.map(m=>`<div class="maintenance-item"><h4>${m.drone}</h4><p>${m.type}</p><p>${m.notes}</p><p style="color:#667eea;margin-top:8px;">${new Date(m.date).toLocaleString()}</p></div>`).join('');}
-function loadMaintenance(){if(window.appState.isOnline){onSnapshot(query(collection(db,"maintenance"),orderBy("date","desc")),snap=>{window.appState.maintenance=snap.docs.map(d=>({...d.data(),id:d.id})); renderMaintenance(window.appState.maintenance);});} else {const offline=JSON.parse(localStorage.getItem('offlineMaintenance')||'[]'); renderMaintenance(offline);}}
-loadFlights(); loadMaintenance();
-
-// TAB SWITCHING
-window.switchTab=function(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); document.querySelectorAll('.content').forEach(c=>c.classList.remove('active')); document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active'); document.getElementById(tab+'-content').classList.add('active'); if(tab==='history') loadFlights(); if(tab==='maintenance') loadMaintenance();}
-
-// WEATHER
-window.getWeather=function(){if(!navigator.geolocation){alert('Geolocation not supported'); return;} navigator.geolocation.getCurrentPosition(async pos=>{try{const lat=pos.coords.latitude; const lon=pos.coords.longitude; const res=await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=YOUR_OPENWEATHER_KEY&units=metric`); const w=await res.json(); alert(`Weather: ${w.weather[0].description}, Temp: ${w.main.temp}°C`); localStorage.setItem('lastWeather',JSON.stringify(w));}catch(e){alert('Weather fetch failed');}}, err=>{const w=JSON.parse(localStorage.getItem('lastWeather')||'{}'); if(w.weather) alert(`Last Weather: ${w.weather[0].description}, Temp: ${w.main.temp}°C`); else alert('Cannot get location');});}
-
-// MAP
-let map, polyline, path=[];
-function initMap(){map=L.map('map').setView([37.7749,-122.4194],13); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map); polyline=L.polyline([], {color:'#667eea'}).addTo(map);}
-function updateMap(lat, lon){path.push([lat,lon]); polyline.setLatLngs(path); map.setView([lat,lon]); L.marker([lat,lon]).addTo(map);}
-window.startGeolocation=function(){if(!navigator.geolocation) return; navigator.geolocation.watchPosition(pos=>{updateMap(pos.coords.latitude,pos.coords.longitude);},err=>{}, {enableHighAccuracy:true});}
-window.addEventListener('load',()=>{initMap(); startGeolocation();});
-
-// LEAFLET
-let link = document.createElement('link'); link.rel='stylesheet'; link.href='https://unpkg.com/leaflet/dist/leaflet.css'; document.head.appendChild(link);
-let script = document.createElement('script'); script.src='https://unpkg.com/leaflet/dist/leaflet.js'; document.body.appendChild(script);
-
-// CSV EXPORT
-window.exportFlights=function(){const arr=window.appState.flights.concat(loadOfflineData()); if(arr.length===0){alert('No flights'); return;} const csv=['Drone,Location,Start,End,Purpose,LAANC']; arr.forEach(f=>{csv.push([f.droneType,f.location,f.startTime,f.endTime,f.purpose,f.laanc].map(v=>`"${v||''}"`).join(','));}); const blob=new Blob([csv.join('\n')],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='flights.csv'; a.click(); URL.revokeObjectURL(url);}
 </script>
 
-<!-- MANIFEST -->
-<script type="application/manifest+json" id="manifest">
-{
-  "name": "Flight Tracker",
-  "short_name": "FlightTracker",
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#667eea",
-  "description": "Randy Neal Flight Tracker PWA",
-  "icons": [
-    {"src":"https://cdn-icons-png.flaticon.com/512/3126/3126502.png","sizes":"192x192","type":"image/png"},
-    {"src":"https://cdn-icons-png.flaticon.com/512/3126/3126502.png","sizes":"512x512","type":"image/png"}
-  ]
-}
-</script>
-
-<!-- SERVICE WORKER -->
+<!-- PWA MANIFEST -->
+<link rel="manifest" href="manifest.json">
 <script>
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register(URL.createObjectURL(new Blob([`
-    const CACHE_NAME='flighttracker-v1';
-    const urlsToCache=['/'];
-    self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(urlsToCache))});
-    self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))}); 
-  `],{type:'text/javascript'})));
+  navigator.serviceWorker.register('sw.js').catch(e=>console.log(e));
 }
 </script>
 
