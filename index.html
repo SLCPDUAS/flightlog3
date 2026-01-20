@@ -53,9 +53,14 @@ button{
 }
 button.secondary{background:var(--secondary)}
 button.danger{background:var(--danger)}
+
 .timer{text-align:center;font-size:2em;font-weight:bold;margin:12px 0}
 .timer-controls{display:flex;gap:8px}
-.timer-controls button{flex:1}
+.timer-controls button{flex:1;font-size:16px;padding:12px;border-radius:8px;border:none;color:#fff}
+.timer-controls button.start{background:#27ae60}   /* green */
+.timer-controls button.stop{background:#c0392b}    /* red */
+.timer-controls button.reset{background:#7f8c8d}   /* gray */
+
 .flight-card{
   background:var(--bg);border-radius:10px;padding:8px;margin-bottom:6px;font-size:14px
 }
@@ -86,9 +91,9 @@ button.danger{background:var(--danger)}
 
 <div class="timer" id="timer">00:00</div>
 <div class="timer-controls">
-  <button onclick="startTimer()">Start</button>
-  <button class="secondary" onclick="stopTimer()">End</button>
-  <button class="secondary" onclick="resetFlight()">Reset</button>
+  <button class="start" onclick="startTimer()">Start</button>
+  <button class="stop" onclick="stopTimer()">End</button>
+  <button class="reset" onclick="resetFlight()">Reset</button>
 </div>
 <button onclick="saveFlight()">Save Flight</button>
 </section>
@@ -146,6 +151,26 @@ function startTimer(){if(t)return;t=setInterval(()=>{sec++;updateTimer()},1000)}
 function stopTimer(){clearInterval(t);t=null}
 function resetFlight(){stopTimer();sec=0;updateTimer();["drone","location","reason","wind","laanc","notes"].forEach(id=>$(id).value="")}
 
+/* Flight time helpers */
+function parseTimeToSeconds(t){
+  const [m,s]=t.split(":").map(Number);
+  return m*60+s;
+}
+function formatSeconds(sec){
+  const m=Math.floor(sec/60), s=sec%60;
+  return `${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
+}
+function computeCumulativeTimes(){
+  const f=safeParse("flights");
+  const cum={};
+  f.forEach(flight=>{
+    const secs=parseTimeToSeconds(flight.time);
+    if(cum[flight.drone]) cum[flight.drone]+=secs;
+    else cum[flight.drone]=secs;
+  });
+  return cum;
+}
+
 /* Flights */
 function saveFlight(){
   if(!$("drone").value||!$("location").value||!$("reason").value){alert("Drone, Location, and Reason are required.");return}
@@ -157,10 +182,15 @@ function deleteFlight(i){const f=safeParse("flights");f.splice(i,1);localStorage
 function toggleDetails(i){const el=$("details-"+i);el.style.display=el.style.display==="none"?"block":"none"}
 function renderFlights(){
   $("flightHistory").innerHTML="";
+  const cum=computeCumulativeTimes();
   safeParse("flights").forEach((f,i)=>{
     $("flightHistory").innerHTML+=`
     <div class="flight-card">
-      <div class="flight-header"><span>${f.date}</span><span>${f.drone}</span><span>${f.time}</span></div>
+      <div class="flight-header">
+        <span>${f.date}</span>
+        <span>${f.drone} (Total: ${formatSeconds(cum[f.drone])})</span>
+        <span>${f.time}</span>
+      </div>
       <div class="flight-details" id="details-${i}">
         <div><strong>Location:</strong> ${f.location}</div>
         <div><strong>Reason:</strong> ${f.reason}</div>
@@ -199,7 +229,9 @@ function renderMaintenance(){
 }
 
 populateDropdowns();
-updateTimer();renderFlights();renderMaintenance();
+updateTimer();
+renderFlights();
+renderMaintenance();
 </script>
 </body>
 </html>
