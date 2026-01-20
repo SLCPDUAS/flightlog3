@@ -71,6 +71,7 @@ button.danger{background:var(--danger)}
   <button class="secondary" onclick="toggleDark()">Toggle Dark Mode</button>
 </header>
 
+<!-- Flight Log -->
 <section>
 <h3>Flight Log</h3>
 <label>Drone Flown *</label>
@@ -98,21 +99,25 @@ button.danger{background:var(--danger)}
 <button onclick="saveFlight()">Save Flight</button>
 </section>
 
+<!-- Flight History Button -->
 <section>
-<h3>Flight History</h3>
-<div class="history-container" id="flightHistory"></div>
+  <button class="secondary" onclick="toggleFlightHistory()">Flight History</button>
+  <div id="flightHistorySection" style="display:none;margin-top:12px">
+    <div class="history-container" id="flightHistory"></div>
+  </div>
 </section>
 
+<!-- Drone Maintenance Button -->
 <section>
-<button class="secondary" onclick="toggleMaintenance()">Drone Maintenance</button>
-<div id="maintenanceSection" style="display:none;margin-top:12px">
-  <label>Drone *</label>
-  <select id="mDrone"></select>
-  <label>Issues Found</label><textarea id="mIssues"></textarea>
-  <label>Maintenance Performed</label><textarea id="mWork"></textarea>
-  <button onclick="saveMaintenance()">Save Maintenance</button>
-  <div class="history-container" id="maintenanceHistory"></div>
-</div>
+  <button class="secondary" onclick="toggleMaintenance()">Drone Maintenance</button>
+  <div id="maintenanceSection" style="display:none;margin-top:12px">
+    <label>Drone *</label>
+    <select id="mDrone"></select>
+    <label>Issues Found</label><textarea id="mIssues"></textarea>
+    <label>Maintenance Performed</label><textarea id="mWork"></textarea>
+    <button onclick="saveMaintenance()">Save Maintenance</button>
+    <div class="history-container" id="maintenanceHistory"></div>
+  </div>
 </section>
 
 <script>
@@ -126,7 +131,6 @@ const drones=[
   "DJI Matrice 4T #2","DJI Matrice 4T #3","DJI Mavic 3E #1","DJI Mavic PT30T #1",
   "Skydio 10-1","Skydio 10-2-2","Skydio 10-3","Skydio 10-4","Skydio 10-5","Autel 640 V3 #1"
 ];
-
 function populateDropdowns(){
   const flight=$("drone"),maint=$("mDrone");
   flight.innerHTML='<option value="">Select Drone</option>';
@@ -190,6 +194,12 @@ function renderFlights(){
       </div>
     </div>`
   })
+}
+
+/* Flight History toggle */
+function toggleFlightHistory(){
+  const sec=$("flightHistorySection");
+  sec.style.display = sec.style.display==="none"?"block":"none";
 }
 
 /* Maintenance */
