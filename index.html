@@ -32,20 +32,12 @@ section{
   margin:12px;padding:14px;border-radius:12px
 }
 label{display:block;margin-top:12px;font-weight:600}
-input,textarea{
-  width:100%;margin-top:6px;padding:12px;
-  font-size:16px;border-radius:8px;
-  border:1px solid var(--border);
-  background:transparent;color:var(--text)
+input,textarea,select{
+  width:100%;margin-top:6px;padding:12px;font-size:16px;border-radius:8px;
+  border:1px solid var(--border);background:transparent;color:var(--text)
 }
 textarea{min-height:70px}
-select{
-  width:100%;margin-top:6px;padding:12px;
-  font-size:16px;border-radius:8px;
-  border:1px solid var(--border);
-  background:var(--card);color:var(--text);
-  appearance:auto;-webkit-appearance:menulist;
-}
+select{background:var(--card);appearance:auto;-webkit-appearance:menulist}
 button{
   width:100%;padding:14px;margin-top:12px;
   font-size:16px;border-radius:10px;
@@ -84,7 +76,15 @@ button.danger{background:var(--danger)}
 <label>Drone Flown *</label>
 <select id="drone"></select>
 <label>Location *</label><input id="location">
-<label>Reason for Flight *</label><input id="reason">
+
+<label>Reason for Flight *</label>
+<select id="reason">
+  <option value="">Select Reason</option>
+  <option value="Recreational">Recreational</option>
+  <option value="Training">Training</option>
+  <option value="SLCPD">SLCPD</option>
+</select>
+
 <label>Wind Conditions</label><input id="wind">
 <label>LAANC Authorization Number</label><input id="laanc">
 <label>Preflight Notes</label><textarea id="notes"></textarea>
@@ -104,20 +104,22 @@ button.danger{background:var(--danger)}
 </section>
 
 <section>
-<h3>Drone Maintenance</h3>
-<label>Drone *</label>
-<select id="mDrone"></select>
-<label>Issues Found</label><textarea id="mIssues"></textarea>
-<label>Maintenance Performed</label><textarea id="mWork"></textarea>
-<button onclick="saveMaintenance()">Save Maintenance</button>
-<div class="history-container" id="maintenanceHistory"></div>
+<button class="secondary" onclick="toggleMaintenance()">Drone Maintenance</button>
+<div id="maintenanceSection" style="display:none;margin-top:12px">
+  <label>Drone *</label>
+  <select id="mDrone"></select>
+  <label>Issues Found</label><textarea id="mIssues"></textarea>
+  <label>Maintenance Performed</label><textarea id="mWork"></textarea>
+  <button onclick="saveMaintenance()">Save Maintenance</button>
+  <div class="history-container" id="maintenanceHistory"></div>
+</div>
 </section>
 
 <script>
 const $=id=>document.getElementById(id);
 const safeParse=k=>{try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]};}
 
-/* Fleet List */
+/* Drone List */
 const drones=[
   "Skyrover S1","DJI Mini 3 Pro #1","DJI Avata Patrol #1","DJI Avata Patrol #2",
   "DJI Mavic 3T #1.2","DJI Mavic 3T #2.1","DJI Mavic #3","DJI Matrice 4T #1",
@@ -125,7 +127,6 @@ const drones=[
   "Skydio 10-1","Skydio 10-2-2","Skydio 10-3","Skydio 10-4","Skydio 10-5","Autel 640 V3 #1"
 ];
 
-/* Populate both dropdowns */
 function populateDropdowns(){
   const flight=$("drone"),maint=$("mDrone");
   flight.innerHTML='<option value="">Select Drone</option>';
@@ -152,24 +153,9 @@ function stopTimer(){clearInterval(t);t=null}
 function resetFlight(){stopTimer();sec=0;updateTimer();["drone","location","reason","wind","laanc","notes"].forEach(id=>$(id).value="")}
 
 /* Flight time helpers */
-function parseTimeToSeconds(t){
-  const [m,s]=t.split(":").map(Number);
-  return m*60+s;
-}
-function formatSeconds(sec){
-  const m=Math.floor(sec/60), s=sec%60;
-  return `${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;
-}
-function computeCumulativeTimes(){
-  const f=safeParse("flights");
-  const cum={};
-  f.forEach(flight=>{
-    const secs=parseTimeToSeconds(flight.time);
-    if(cum[flight.drone]) cum[flight.drone]+=secs;
-    else cum[flight.drone]=secs;
-  });
-  return cum;
-}
+function parseTimeToSeconds(t){const [m,s]=t.split(":").map(Number);return m*60+s;}
+function formatSeconds(sec){const m=Math.floor(sec/60),s=sec%60;return `${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;}
+function computeCumulativeTimes(){const f=safeParse("flights");const cum={};f.forEach(flight=>{const secs=parseTimeToSeconds(flight.time);cum[flight.drone]=(cum[flight.drone]||0)+secs});return cum;}
 
 /* Flights */
 function saveFlight(){
@@ -207,6 +193,10 @@ function renderFlights(){
 }
 
 /* Maintenance */
+function toggleMaintenance() {
+  const sec = $("maintenanceSection");
+  sec.style.display = sec.style.display === "none" ? "block" : "none";
+}
 function saveMaintenance(){
   if(!$("mDrone").value){alert("Drone selection is required.");return}
   const m=safeParse("maintenance");
@@ -228,6 +218,7 @@ function renderMaintenance(){
   })
 }
 
+/* Initialize */
 populateDropdowns();
 updateTimer();
 renderFlights();
