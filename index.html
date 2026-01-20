@@ -2,188 +2,323 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Flight Tracker</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flight Tracker - Randy Neal</title>
 
 <style>
-body{margin:0;font-family:system-ui;background:#000;color:#fff}
-header{background:#111;padding:15px;text-align:center}
-section{padding:15px}
-.card{background:#1c1c1e;padding:15px;border-radius:10px;margin-bottom:15px}
-button{padding:12px;border:none;border-radius:8px;font-weight:600;width:100%;margin-top:8px}
-.start{background:#34c759}
-.stop{background:#ff3b30}
-.reset{background:#8e8e93}
-input,select,textarea{
- width:100%;padding:10px;border-radius:6px;
- border:1px solid #333;background:#2c2c2e;color:#fff
+:root {
+  --bg:#f2f4f7;
+  --card:#ffffff;
+  --text:#111;
+  --primary:#1f3a5f;
+  --secondary:#666;
+  --danger:#c0392b;
+  --border:#ccc;
 }
-.timer{font-size:2.6em;text-align:center;margin-bottom:10px}
-#map{height:300px;border-radius:10px}
-.flight{border-left:4px solid #667eea;padding-left:10px;margin-bottom:12px}
+
+body.dark {
+  --bg:#0f1115;
+  --card:#1c1f26;
+  --text:#f1f1f1;
+  --primary:#4da3ff;
+  --secondary:#999;
+  --danger:#ff6b6b;
+  --border:#333;
+}
+
+* { box-sizing:border-box; }
+
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right)
+          env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+header {
+  background:var(--primary);
+  color:#fff;
+  padding:16px;
+  text-align:center;
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+
+section {
+  background:var(--card);
+  margin:12px;
+  padding:14px;
+  border-radius:12px;
+}
+
+label {
+  display:block;
+  margin-top:12px;
+  font-weight:600;
+}
+
+input, textarea {
+  width:100%;
+  margin-top:6px;
+  padding:12px;
+  font-size:16px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:transparent;
+  color:var(--text);
+}
+
+textarea { min-height:70px; }
+
+button {
+  width:100%;
+  padding:14px;
+  margin-top:12px;
+  font-size:16px;
+  border-radius:10px;
+  border:none;
+  background:var(--primary);
+  color:#fff;
+}
+
+button.secondary { background:var(--secondary); }
+button.danger { background:var(--danger); }
+
+.timer {
+  text-align:center;
+  font-size:2em;
+  font-weight:bold;
+  margin:12px 0;
+}
+
+.timer-controls {
+  display:flex;
+  gap:8px;
+}
+
+.timer-controls button { flex:1; }
+
+.card {
+  background:var(--bg);
+  border-radius:10px;
+  padding:12px;
+  margin-bottom:10px;
+}
+
+.card strong {
+  display:block;
+  margin-top:6px;
+}
 </style>
 </head>
 
 <body>
 
 <header>
-<h2>✈️ Flight Tracker</h2>
-<p>Randy Neal</p>
+  <h1>Flight Tracker</h1>
+  <p>Randy Neal<br>FAA Pilot License #5208259</p>
+  <button class="secondary" type="button" onclick="toggleDark()">Toggle Dark Mode</button>
 </header>
 
 <section>
+<h3>Flight Log</h3>
 
-<div class="card">
-<div id="timer" class="timer">00:00:00</div>
-<button class="start" onclick="startTimer()">Start</button>
-<button class="stop" onclick="stopTimer()">Stop</button>
-<button class="reset" onclick="resetTimer()">Reset</button>
+<label>Drone Flown *</label>
+<input id="drone">
+
+<label>Location *</label>
+<input id="location">
+
+<label>Reason for Flight *</label>
+<input id="reason">
+
+<label>Wind Conditions</label>
+<input id="wind">
+
+<label>LAANC Authorization Number</label>
+<input id="laanc">
+
+<label>Preflight Notes</label>
+<textarea id="notes"></textarea>
+
+<div class="timer" id="timer">00:00</div>
+
+<div class="timer-controls">
+  <button type="button" onclick="startTimer()">Start</button>
+  <button type="button" class="secondary" onclick="stopTimer()">End</button>
+  <button type="button" class="secondary" onclick="resetTimer()">Reset</button>
 </div>
 
-<div class="card">
-<select id="drone">
-<option value="">Select Drone</option>
-<option>Skyrover S1</option>
-<option>Skydio X10-1</option>
-<option>Skydio X10-2.2</option>
-<option>Skydio X10-3</option>
-<option>Skydio X10-4</option>
-<option>Skydio X10-5</option>
-</select>
-<input id="address" placeholder="Auto-filled from GPS">
-<textarea id="purpose" placeholder="Flight purpose"></textarea>
-<button onclick="saveFlight()">Save Flight</button>
-</div>
-
-<div class="card">
-<h3>Map</h3>
-<div id="map"></div>
-</div>
-
-<div class="card">
-<h3>Weather</h3>
-<div id="weather">Waiting for GPS…</div>
-</div>
-
-<div class="card">
-<h3>Flight History</h3>
-<div id="history"></div>
-</div>
-
+<button type="button" onclick="saveFlight()">Save Flight</button>
 </section>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<section>
+<h3>Flight History</h3>
+<div id="flightHistory"></div>
+</section>
+
+<section>
+<h3>Drone Maintenance</h3>
+
+<label>Drone</label>
+<input id="mDrone">
+
+<label>Issues Found</label>
+<textarea id="mIssues"></textarea>
+
+<label>Maintenance Performed</label>
+<textarea id="mWork"></textarea>
+
+<button type="button" onclick="saveMaintenance()">Save Maintenance</button>
+
+<div id="maintenanceHistory"></div>
+</section>
 
 <script>
-/* ---------------- TIMER ---------------- */
-let interval=null, elapsed=0, startISO=null;
+/* ---------- HELPERS ---------- */
+const $ = id => document.getElementById(id);
+const safeParse = key => {
+  try { return JSON.parse(localStorage.getItem(key)) || []; }
+  catch { return []; }
+};
 
-function renderTimer(){
- const h=String(Math.floor(elapsed/3600)).padStart(2,'0');
- const m=String(Math.floor((elapsed%3600)/60)).padStart(2,'0');
- const s=String(elapsed%60).padStart(2,'0');
- timer.textContent=`${h}:${m}:${s}`;
+/* ---------- DARK MODE ---------- */
+(function initDark(){
+  const saved = localStorage.getItem("darkMode");
+  if (
+    saved === "true" ||
+    (saved === null && window.matchMedia("(prefers-color-scheme: dark)").matches)
+  ) {
+    document.body.classList.add("dark");
+  }
+})();
+
+function toggleDark(){
+  document.body.classList.toggle("dark");
+  localStorage.setItem("darkMode", document.body.classList.contains("dark"));
 }
 
+/* ---------- TIMER ---------- */
+let timerInterval = null;
+let seconds = Number(localStorage.getItem("timerSeconds")) || 0;
+
+function updateTimer(){
+  $("timer").textContent =
+    String(Math.floor(seconds/60)).padStart(2,"0") + ":" +
+    String(seconds%60).padStart(2,"0");
+}
+
+updateTimer();
+
 function startTimer(){
- if(interval) return;
- startISO=new Date().toISOString();
- interval=setInterval(()=>{elapsed++;renderTimer();},1000);
+  if (timerInterval) return;
+  timerInterval = setInterval(() => {
+    seconds++;
+    localStorage.setItem("timerSeconds", seconds);
+    updateTimer();
+  }, 1000);
 }
 
 function stopTimer(){
- clearInterval(interval);
- interval=null;
+  clearInterval(timerInterval);
+  timerInterval = null;
 }
 
 function resetTimer(){
- stopTimer();
- elapsed=0;
- startISO=null;
- renderTimer();
+  stopTimer();
+  seconds = 0;
+  localStorage.removeItem("timerSeconds");
+  updateTimer();
 }
 
-/* ---------------- MAP + GPS ---------------- */
-let map, marker, lat=null, lng=null;
-
-navigator.geolocation.getCurrentPosition(pos=>{
- lat=pos.coords.latitude;
- lng=pos.coords.longitude;
-
- map=L.map('map');
- L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
- map.setView([lat,lng],16);
- marker=L.marker([lat,lng]).addTo(map);
- map.invalidateSize();
-
- reverseGeocode(lat,lng);
- loadWeather(lat,lng);
-},()=>alert("GPS permission required"));
-
-/* ---------------- GOOGLE GEOCODING ---------------- */
-const GOOGLE_KEY="AIzaSyB76-DcQwEsU4Q1S-aHKf11-VceYQnu5Zw";
-
-function reverseGeocode(lat,lng){
- fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_KEY}`)
- .then(r=>r.json())
- .then(d=>{
-  if(d.results?.[0]) address.value=d.results[0].formatted_address;
- });
-}
-
-/* ---------------- WEATHER ---------------- */
-function loadWeather(lat,lng){
- fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m`)
- .then(r=>r.json())
- .then(d=>{
-  weather.innerHTML=
-   `Temp: ${d.current.temperature_2m}°F<br>
-    Wind: ${d.current.wind_speed_10m} mph`;
- });
-}
-
-/* ---------------- STORAGE ---------------- */
+/* ---------- FLIGHTS ---------- */
 function saveFlight(){
- if(!drone.value) return alert("Select drone");
+  if (!$("drone").value || !$("location").value || !$("reason").value) {
+    alert("Drone, Location, and Reason are required.");
+    return;
+  }
 
- const flights=JSON.parse(localStorage.getItem("flights")||"[]");
+  const flights = safeParse("flights");
+  flights.push({
+    date: new Date().toLocaleString(),
+    drone: $("drone").value,
+    location: $("location").value,
+    reason: $("reason").value,
+    wind: $("wind").value,
+    laanc: $("laanc").value,
+    notes: $("notes").value,
+    time: $("timer").textContent
+  });
 
- flights.unshift({
-  drone:drone.value,
-  address:address.value,
-  purpose:purpose.value,
-  duration:timer.textContent,
-  start:startISO,
-  end:new Date().toISOString()
- });
-
- localStorage.setItem("flights",JSON.stringify(flights));
- resetTimer();
- renderHistory();
+  localStorage.setItem("flights", JSON.stringify(flights));
+  resetTimer();
+  renderFlights();
 }
 
 function deleteFlight(i){
- const flights=JSON.parse(localStorage.getItem("flights"));
- flights.splice(i,1);
- localStorage.setItem("flights",JSON.stringify(flights));
- renderHistory();
+  const flights = safeParse("flights");
+  flights.splice(i,1);
+  localStorage.setItem("flights", JSON.stringify(flights));
+  renderFlights();
 }
 
-function renderHistory(){
- const flights=JSON.parse(localStorage.getItem("flights")||"[]");
- history.innerHTML=flights.length?flights.map((f,i)=>`
-  <div class="flight">
-   <b>${f.drone}</b><br>
-   ${f.address||'Unknown location'}<br>
-   Duration: ${f.duration}<br>
-   <button onclick="deleteFlight(${i})">Delete</button>
-  </div>`).join(""):"No flights yet";
+function renderFlights(){
+  $("flightHistory").innerHTML = "";
+  safeParse("flights").forEach((f,i) => {
+    $("flightHistory").innerHTML += `
+      <div class="card">
+        <strong>Date:</strong>${f.date}
+        <strong>Drone:</strong>${f.drone}
+        <strong>Location:</strong>${f.location}
+        <strong>Reason:</strong>${f.reason}
+        <strong>Wind:</strong>${f.wind}
+        <strong>LAANC:</strong>${f.laanc}
+        <strong>Notes:</strong>${f.notes}
+        <strong>Time:</strong>${f.time}
+        <button class="danger" type="button" onclick="deleteFlight(${i})">Delete</button>
+      </div>`;
+  });
 }
 
-renderTimer();
-renderHistory();
+/* ---------- MAINTENANCE ---------- */
+function saveMaintenance(){
+  const logs = safeParse("maintenance");
+  logs.push({
+    date: new Date().toLocaleString(),
+    drone: $("mDrone").value,
+    issues: $("mIssues").value,
+    work: $("mWork").value
+  });
+  localStorage.setItem("maintenance", JSON.stringify(logs));
+  renderMaintenance();
+}
+
+function deleteMaintenance(i){
+  const logs = safeParse("maintenance");
+  logs.splice(i,1);
+  localStorage.setItem("maintenance", JSON.stringify(logs));
+  renderMaintenance();
+}
+
+function renderMaintenance(){
+  $("maintenanceHistory").innerHTML = "";
+  safeParse("maintenance").forEach((m,i) => {
+    $("maintenanceHistory").innerHTML += `
+      <div class="card">
+        <strong>Date:</strong>${m.date}
+        <strong>Drone:</strong>${m.drone}
+        <strong>Issues:</strong>${m.issues}
+        <strong>Maintenance:</strong>${m.work}
+        <button class="danger" type="button" onclick="deleteMaintenance(${i})">Delete</button>
+      </div>`;
+  });
+}
+
+renderFlights();
+renderMaintenance();
 </script>
 
 </body>
