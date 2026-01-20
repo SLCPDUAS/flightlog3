@@ -86,7 +86,7 @@ button.danger{background:var(--danger)}
   <option value="SLCPD">SLCPD</option>
 </select>
 
-<label>Weather</label><input id="wind">
+<label>Wind Conditions</label><input id="wind">
 <label>LAANC Authorization Number</label><input id="laanc">
 <label>Preflight Notes</label><textarea id="notes"></textarea>
 
@@ -120,64 +120,80 @@ button.danger{background:var(--danger)}
   </div>
 </section>
 
-<script>
-const $=id=>document.getElementById(id);
-const safeParse=k=>{try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]};}
+<!-- Firebase Modular SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
+import { 
+  getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy 
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
-/* Drone List */
-const drones=[
-  "Skyrover S1","DJI Mini 3 Pro #1","DJI Avata Patrol #1","DJI Avata Patrol #2",
-  "DJI Mavic 3T #1.2","DJI Mavic 3T #2.1","DJI Mavic #3","DJI Matrice 4T #1",
-  "DJI Matrice 4T #2","DJI Matrice 4T #3","DJI Mavic 3E #1","DJI Mavic PT30T #1",
-  "Skydio 10-1","Skydio 10-2-2","Skydio 10-3","Skydio 10-4","Skydio 10-5","Autel 640 V3 #1"
-];
+// ===== Firebase Config (YOUR CONFIG INSERTED) =====
+const firebaseConfig = {
+  apiKey: "AIzaSyDe0dVJ19xr29sX7S7burryDmh7Z6YwL_s",
+  authDomain: "drone-flight-log-24580.firebaseapp.com",
+  projectId: "drone-flight-log-24580",
+  storageBucket: "drone-flight-log-24580.firebasestorage.app",
+  messagingSenderId: "746343740289",
+  appId: "1:746343740289:web:68939753c6e7c6898a6e80",
+  measurementId: "G-1KEEPFQFGE"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const db = getFirestore(app);
+
+// ===== Utility =====
+const $=id=>document.getElementById(id);
+const drones=["Skyrover S1","DJI Mini 3 Pro #1","DJI Avata Patrol #1","DJI Avata Patrol #2","DJI Mavic 3T #1.2","DJI Mavic 3T #2.1","DJI Mavic #3","DJI Matrice 4T #1","DJI Matrice 4T #2","DJI Matrice 4T #3","DJI Mavic 3E #1","DJI Mavic PT30T #1","Skydio 10-1","Skydio 10-2-2","Skydio 10-3","Skydio 10-4","Skydio 10-5","Autel 640 V3 #1"];
 function populateDropdowns(){
   const flight=$("drone"),maint=$("mDrone");
   flight.innerHTML='<option value="">Select Drone</option>';
   maint.innerHTML='<option value="">Select Drone</option>';
-  drones.forEach(d=>{
-    flight.innerHTML+=`<option>${d}</option>`;
-    maint.innerHTML+=`<option>${d}</option>`;
-  })
+  drones.forEach(d=>{flight.innerHTML+=`<option>${d}</option>`;maint.innerHTML+=`<option>${d}</option>`;})
 }
+populateDropdowns();
 
-/* Dark Mode */
-(function(){
-  const s=localStorage.getItem("darkMode");
-  if(s==="true"||(s===null&&matchMedia("(prefers-color-scheme: dark)").matches))
-    document.body.classList.add("dark")
-})();
-function toggleDark(){document.body.classList.toggle("dark");localStorage.setItem("darkMode",document.body.classList.contains("dark"))}
+// ===== Dark Mode =====
+(function(){const s=localStorage.getItem("darkMode");if(s==="true"||(s===null&&matchMedia("(prefers-color-scheme: dark)").matches)) document.body.classList.add("dark");})();
+function toggleDark(){document.body.classList.toggle("dark");localStorage.setItem("darkMode",document.body.classList.contains("dark"));}
 
-/* Timer */
+// ===== Timer =====
 let t=null,sec=0;
-function updateTimer(){$("timer").textContent=String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0")}
-function startTimer(){if(t)return;t=setInterval(()=>{sec++;updateTimer()},1000)}
-function stopTimer(){clearInterval(t);t=null}
-function resetFlight(){stopTimer();sec=0;updateTimer();["drone","location","reason","wind","laanc","notes"].forEach(id=>$(id).value="")}
+function updateTimer(){$("timer").textContent=String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");}
+function startTimer(){if(t)return;t=setInterval(()=>{sec++;updateTimer()},1000);}
+function stopTimer(){clearInterval(t);t=null;}
+function resetFlight(){stopTimer();sec=0;updateTimer();["drone","location","reason","wind","laanc","notes"].forEach(id=>$(id).value="");}
 
-/* Flight time helpers */
+// ===== Time Helpers =====
 function parseTimeToSeconds(t){const [m,s]=t.split(":").map(Number);return m*60+s;}
 function formatSeconds(sec){const m=Math.floor(sec/60),s=sec%60;return `${m.toString().padStart(2,"0")}:${s.toString().padStart(2,"0")}`;}
-function computeCumulativeTimes(){const f=safeParse("flights");const cum={};f.forEach(flight=>{const secs=parseTimeToSeconds(flight.time);cum[flight.drone]=(cum[flight.drone]||0)+secs});return cum;}
+function computeCumulativeTimes(flights){const cum={};flights.forEach(f=>{const secs=parseTimeToSeconds(f.time);cum[f.drone]=(cum[f.drone]||0)+secs});return cum;}
 
-/* Flights */
-function saveFlight(){
-  if(!$("drone").value||!$("location").value||!$("reason").value){alert("Drone, Location, and Reason are required.");return}
-  const f=safeParse("flights");
-  f.push({date:new Date().toLocaleString(),drone:$("drone").value,location:$("location").value,reason:$("reason").value,wind:$("wind").value,laanc:$("laanc").value,notes:$("notes").value,time:$("timer").textContent});
-  localStorage.setItem("flights",JSON.stringify(f));resetFlight();renderFlights()
+// ===== Flights =====
+async function saveFlight(){
+  if(!$("drone").value||!$("location").value||!$("reason").value){alert("Drone, Location, and Reason are required.");return;}
+  const flightData={date:new Date().toISOString(),drone:$("drone").value,location:$("location").value,reason:$("reason").value,wind:$("wind").value,laanc:$("laanc").value,notes:$("notes").value,time:$("timer").textContent};
+  try{
+    await addDoc(collection(db,"flights"),flightData);
+    resetFlight();renderFlights();
+  } catch(e){console.error(e);}
 }
-function deleteFlight(i){const f=safeParse("flights");f.splice(i,1);localStorage.setItem("flights",JSON.stringify(f));renderFlights()}
-function toggleDetails(i){const el=$("details-"+i);el.style.display=el.style.display==="none"?"block":"none"}
-function renderFlights(){
+
+async function deleteFlight(id){await deleteDoc(doc(db,"flights",id));renderFlights();}
+function toggleDetails(i){const el=$("details-"+i);el.style.display=el.style.display==="none"?"block":"none";}
+async function renderFlights(){
   $("flightHistory").innerHTML="";
-  const cum=computeCumulativeTimes();
-  safeParse("flights").forEach((f,i)=>{
+  const q=query(collection(db,"flights"),orderBy("date","desc"));
+  const snapshot=await getDocs(q);
+  const flights=[];
+  snapshot.forEach(docSnap=>flights.push({id:docSnap.id,...docSnap.data()}));
+  const cum=computeCumulativeTimes(flights);
+  flights.forEach((f,i)=>{
     $("flightHistory").innerHTML+=`
     <div class="flight-card">
       <div class="flight-header">
-        <span>${f.date}</span>
+        <span>${new Date(f.date).toLocaleString()}</span>
         <span>${f.drone} (Total: ${formatSeconds(cum[f.drone])})</span>
         <span>${f.time}</span>
       </div>
@@ -190,50 +206,43 @@ function renderFlights(){
       </div>
       <div class="flight-actions">
         <button class="secondary" onclick="toggleDetails(${i})">Details</button>
-        <button class="danger" onclick="deleteFlight(${i})">Delete</button>
+        <button class="danger" onclick="deleteFlight('${f.id}')">Delete</button>
       </div>
-    </div>`
-  })
+    </div>`;
+  });
 }
+function toggleFlightHistory(){const sec=$("flightHistorySection");sec.style.display=sec.style.display==="none"?"block":"none";}
 
-/* Flight History toggle */
-function toggleFlightHistory(){
-  const sec=$("flightHistorySection");
-  sec.style.display = sec.style.display==="none"?"block":"none";
+// ===== Maintenance =====
+function toggleMaintenance(){const sec=$("maintenanceSection");sec.style.display=sec.style.display==="none"?"block":"none";}
+async function saveMaintenance(){
+  if(!$("mDrone").value){alert("Drone selection is required.");return;}
+  const data={date:new Date().toISOString(),drone:$("mDrone").value,issues:$("mIssues").value,work:$("mWork").value};
+  await addDoc(collection(db,"maintenance"),data);
+  $("mDrone").value="";$("mIssues").value="";$("mWork").value="";renderMaintenance();
 }
-
-/* Maintenance */
-function toggleMaintenance() {
-  const sec = $("maintenanceSection");
-  sec.style.display = sec.style.display === "none" ? "block" : "none";
-}
-function saveMaintenance(){
-  if(!$("mDrone").value){alert("Drone selection is required.");return}
-  const m=safeParse("maintenance");
-  m.push({date:new Date().toLocaleString(),drone:$("mDrone").value,issues:$("mIssues").value,work:$("mWork").value});
-  localStorage.setItem("maintenance",JSON.stringify(m));$("mDrone").value="";$("mIssues").value="";$("mWork").value="";renderMaintenance()
-}
-function deleteMaintenance(i){const m=safeParse("maintenance");m.splice(i,1);localStorage.setItem("maintenance",JSON.stringify(m));renderMaintenance()}
-function renderMaintenance(){
+async function deleteMaintenance(id){await deleteDoc(doc(db,"maintenance",id));renderMaintenance();}
+async function renderMaintenance(){
   $("maintenanceHistory").innerHTML="";
-  safeParse("maintenance").forEach((m,i)=>{
+  const q=query(collection(db,"maintenance"),orderBy("date","desc"));
+  const snapshot=await getDocs(q);
+  snapshot.forEach(docSnap=>{
+    const m=docSnap.data();
     $("maintenanceHistory").innerHTML+=`
     <div class="flight-card">
-      <strong>${m.date}</strong><br>
+      <strong>${new Date(m.date).toLocaleString()}</strong><br>
       <strong>Drone:</strong> ${m.drone}<br>
       <strong>Issues:</strong> ${m.issues}<br>
       <strong>Maintenance:</strong> ${m.work}<br>
-      <button class="danger" onclick="deleteMaintenance(${i})">Delete</button>
-    </div>`
-  })
+      <button class="danger" onclick="deleteMaintenance('${docSnap.id}')">Delete</button>
+    </div>`;
+  });
 }
 
-/* Initialize */
-populateDropdowns();
-updateTimer();
+// ===== Initialize =====
 renderFlights();
 renderMaintenance();
 </script>
+
 </body>
 </html>
-
