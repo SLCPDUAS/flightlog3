@@ -68,7 +68,7 @@ button.danger{background:var(--danger)}
 <header>
   <h1>Flight Tracker</h1>
   <p>Randy Neal<br>FAA Pilot License #5208259</p>
-  <button class="secondary" onclick="toggleDark()">Toggle Dark Mode</button>
+  <button class="secondary" id="toggleDarkBtn">Toggle Dark Mode</button>
 </header>
 
 <!-- Flight Log -->
@@ -120,12 +120,11 @@ button.danger{background:var(--danger)}
   </div>
 </section>
 
-<!-- Firebase Modular SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
 import { 
-  getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, onSnapshot
+  getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 // ===== Firebase Config =====
@@ -138,19 +137,19 @@ const firebaseConfig = {
   appId: "1:746343740289:web:68939753c6e7c6898a6e80",
   measurementId: "G-1KEEPFQFGE"
 };
-
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getFirestore(app);
 
-// ===== Utility =====
-const $=id=>document.getElementById(id);
+// ===== Helpers =====
+const $ = id => document.getElementById(id);
 const drones=["Skyrover S1","DJI Mini 3 Pro #1","DJI Avata Patrol #1","DJI Avata Patrol #2","DJI Mavic 3T #1.2","DJI Mavic 3T #2.1","DJI Mavic #3","DJI Matrice 4T #1","DJI Matrice 4T #2","DJI Matrice 4T #3","DJI Mavic 3E #1","DJI Mavic PT30T #1","Skydio 10-1","Skydio 10-2-2","Skydio 10-3","Skydio 10-4","Skydio 10-5","Autel 640 V3 #1"];
+
 function populateDropdowns(){
-  const flight=$("drone"),maint=$("mDrone");
+  const flight=$("drone"), maint=$("mDrone");
   flight.innerHTML='<option value="">Select Drone</option>';
   maint.innerHTML='<option value="">Select Drone</option>';
-  drones.forEach(d=>{flight.innerHTML+=`<option>${d}</option>`;maint.innerHTML+=`<option>${d}</option>`;})
+  drones.forEach(d=>{flight.innerHTML+=`<option>${d}</option>`; maint.innerHTML+=`<option>${d}</option>`;});
 }
 populateDropdowns();
 
@@ -159,46 +158,39 @@ populateDropdowns();
 function toggleDark(){document.body.classList.toggle("dark");localStorage.setItem("darkMode",document.body.classList.contains("dark"));}
 
 // ===== Timer =====
-let t=null,sec=0;
+let t=null, sec=0;
 function updateTimer(){$("timer").textContent=String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");}
 function startTimer(){if(t)return;t=setInterval(()=>{sec++;updateTimer()},1000);}
-function stopTimer(){clearInterval(t);t=null;}
-function resetFlight(){stopTimer();sec=0;updateTimer();["drone","location","reason","wind","laanc","notes"].forEach(id=>$(id).value="");}
+function stopTimer(){clearInterval(t); t=null;}
+function resetFlight(){stopTimer(); sec=0; updateTimer(); ["drone","location","reason","wind","laanc","notes"].forEach(id=>$(id).value="");}
 
-// ===== Flights =====
+// ===== Flight Functions =====
 async function saveFlight(){
-  if(!$("drone").value||!$("location").value||!$("reason").value){alert("Drone, Location, and Reason are required.");return;}
-  const flightData={date:new Date().toISOString(),drone:$("drone").value,location:$("location").value,reason:$("reason").value,wind:$("wind").value,laanc:$("laanc").value,notes:$("notes").value,time:$("timer").textContent};
-  await addDoc(collection(db,"flights"),flightData);
+  if(!$("drone").value || !$("location").value || !$("reason").value){alert("Drone, Location, and Reason are required.");return;}
+  await addDoc(collection(db,"flights"),{
+    date: new Date().toISOString(),
+    drone:$("drone").value,
+    location:$("location").value,
+    reason:$("reason").value,
+    wind:$("wind").value,
+    laanc:$("laanc").value,
+    notes:$("notes").value,
+    time:$("timer").textContent
+  });
   resetFlight();
 }
+
 async function deleteFlight(id){await deleteDoc(doc(db,"flights",id));}
 
 // ===== Flight History =====
-function toggleFlightHistory(){const sec=$("flightHistorySection");sec.style.display=sec.style.display==="none"?"block":"none";}
-function toggleMaintenance(){const sec=$("maintenanceSection");sec.style.display=sec.style.display==="none"?"block":"none";}
-
-// ===== Maintenance =====
-async function saveMaintenance(){
-  if(!$("mDrone").value){alert("Drone selection is required.");return;}
-  const data={date:new Date().toISOString(),drone:$("mDrone").value,issues:$("mIssues").value,work:$("mWork").value};
-  await addDoc(collection(db,"maintenance"),data);
-  $("mDrone").value="";$("mIssues").value="";$("mWork").value="";
-}
-async function deleteMaintenance(id){await deleteDoc(doc(db,"maintenance",id));}
-
-// ===== Real-time Firestore Updates with Cumulative Timer =====
-onSnapshot(query(collection(db,"flights"),orderBy("date","desc")),(snapshot)=>{
+function renderFlights(docs){
   $("flightHistory").innerHTML="";
-  const droneTotals={}; // cumulative seconds per drone
-
-  snapshot.forEach(docSnap=>{
+  const droneTotals={};
+  docs.forEach(docSnap=>{
     const f=docSnap.data();
-    const [m,s] = f.time.split(":").map(Number);
-    const seconds = m*60 + s;
-    if(droneTotals[f.drone]) droneTotals[f.drone] += seconds;
-    else droneTotals[f.drone] = seconds;
-
+    const [m,s]=f.time.split(":").map(Number);
+    const seconds=m*60+s;
+    droneTotals[f.drone]=(droneTotals[f.drone]||0)+seconds;
     $("flightHistory").innerHTML+=`
       <div class="flight-card">
         <div class="flight-header">
@@ -207,11 +199,11 @@ onSnapshot(query(collection(db,"flights"),orderBy("date","desc")),(snapshot)=>{
           <span>${f.time}</span>
         </div>
         <div class="flight-details">
-          <div><strong>Location:</strong> ${f.location}</div>
-          <div><strong>Reason:</strong> ${f.reason}</div>
-          <div><strong>Wind:</strong> ${f.wind}</div>
-          <div><strong>LAANC:</strong> ${f.laanc}</div>
-          <div><strong>Notes:</strong> ${f.notes}</div>
+          <div><strong>Location:</strong> ${f.location || ""}</div>
+          <div><strong>Reason:</strong> ${f.reason || ""}</div>
+          <div><strong>Wind:</strong> ${f.wind || ""}</div>
+          <div><strong>LAANC:</strong> ${f.laanc || ""}</div>
+          <div><strong>Notes:</strong> ${f.notes || ""}</div>
         </div>
         <div class="flight-actions">
           <button class="secondary" onclick="this.previousElementSibling.style.display=this.previousElementSibling.style.display==='none'?'block':'none'">Details</button>
@@ -219,19 +211,34 @@ onSnapshot(query(collection(db,"flights"),orderBy("date","desc")),(snapshot)=>{
         </div>
       </div>`;
   });
-
-  // Display cumulative time per drone
-  let totalsHtml = "<div style='margin-bottom:8px;font-weight:600'>Cumulative Flight Time per Drone:</div>";
+  // Cumulative timers
+  let totalsHtml="<div style='margin-bottom:8px;font-weight:600'>Cumulative Flight Time per Drone:</div>";
   for(const d in droneTotals){
-    const totalSec = droneTotals[d];
-    const mm = Math.floor(totalSec/60);
-    const ss = totalSec%60;
-    totalsHtml += `<div><strong>${d}:</strong> ${mm.toString().padStart(2,"0")}:${ss.toString().padStart(2,"0")}</div>`;
+    const totalSec=droneTotals[d];
+    totalsHtml+=`<div><strong>${d}:</strong> ${Math.floor(totalSec/60).toString().padStart(2,"0")}:${(totalSec%60).toString().padStart(2,"0")}</div>`;
   }
-  $("flightHistory").innerHTML = totalsHtml + $("flightHistory").innerHTML;
-});
+  $("flightHistory").innerHTML=totalsHtml+$("flightHistory").innerHTML;
+}
 
-onSnapshot(query(collection(db,"maintenance"),orderBy("date","desc")),(snapshot)=>{
+const flightsRef = collection(db,"flights");
+const flightsQuery = query(flightsRef, orderBy("date","desc"));
+onSnapshot(flightsQuery, snapshot => renderFlights(snapshot.docs));
+
+// ===== Maintenance =====
+async function saveMaintenance(){
+  if(!$("mDrone").value){alert("Drone selection is required.");return;}
+  await addDoc(collection(db,"maintenance"),{
+    date: new Date().toISOString(),
+    drone:$("mDrone").value,
+    issues:$("mIssues").value,
+    work:$("mWork").value
+  });
+  $("mDrone").value="";$("mIssues").value="";$("mWork").value="";
+}
+
+async function deleteMaintenance(id){await deleteDoc(doc(db,"maintenance",id));}
+
+onSnapshot(query(collection(db,"maintenance"), orderBy("date","desc")), snapshot=>{
   $("maintenanceHistory").innerHTML="";
   snapshot.forEach(docSnap=>{
     const m=docSnap.data();
@@ -246,7 +253,11 @@ onSnapshot(query(collection(db,"maintenance"),orderBy("date","desc")),(snapshot)
   });
 });
 
-// ===== Attach Functions to Window =====
+// ===== Toggle Functions =====
+function toggleFlightHistory(){const sec=$("flightHistorySection");sec.style.display=sec.style.display==="none"?"block":"none";}
+function toggleMaintenance(){const sec=$("maintenanceSection");sec.style.display=sec.style.display==="none"?"block":"none";}
+
+// ===== Expose to Window =====
 window.startTimer=startTimer;
 window.stopTimer=stopTimer;
 window.resetFlight=resetFlight;
@@ -258,7 +269,7 @@ window.deleteFlight=deleteFlight;
 window.deleteMaintenance=deleteMaintenance;
 window.toggleDark=toggleDark;
 
-// ===== Attach Button Event Listeners =====
+// ===== Button Event Listeners =====
 $("saveFlightBtn").addEventListener("click",saveFlight);
 $("toggleFlightHistoryBtn").addEventListener("click",toggleFlightHistory);
 $("toggleMaintenanceBtn").addEventListener("click",toggleMaintenance);
@@ -266,6 +277,7 @@ $("saveMaintenanceBtn").addEventListener("click",saveMaintenance);
 document.querySelector(".start").addEventListener("click",startTimer);
 document.querySelector(".stop").addEventListener("click",stopTimer);
 document.querySelector(".reset").addEventListener("click",resetFlight);
+$("toggleDarkBtn").addEventListener("click",toggleDark);
 
 </script>
 </body>
