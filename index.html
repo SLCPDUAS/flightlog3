@@ -1,59 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Flight Tracker - Randy Neal</title>
 
 <style>
+/* --- EXISTING STYLES (UNCHANGED) --- */
 :root{
   --bg:#0f1115;--card:#1c1f26;--text:#f1f1f1;
-  --primary:#4da3ff;--danger:#ff6b6b;--border:#333;
+  --primary:#4da3ff;--secondary:#888;--danger:#ff6b6b;
+  --border:#333
 }
 body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
+  margin:0;background:var(--bg);color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial;
 }
 header{
-  background:#111;
-  padding:14px;
-  text-align:center;
-  position:sticky;
-  top:0;
+  background:#111;padding:14px;text-align:center;position:sticky;top:0
 }
 section{
-  background:var(--card);
-  margin:12px;
-  padding:14px;
-  border-radius:12px;
+  background:var(--card);margin:12px;padding:14px;border-radius:12px
 }
 label{display:block;margin-top:10px}
 input,textarea,select{
-  width:100%;
-  padding:12px;
-  margin-top:6px;
-  border-radius:8px;
-  border:1px solid var(--border);
-  background:#000;
-  color:#fff;
+  width:100%;padding:12px;margin-top:6px;
+  border-radius:8px;border:1px solid var(--border);
+  background:#000;color:#fff
 }
 button{
-  width:100%;
-  margin-top:12px;
-  padding:14px;
-  border:none;
-  border-radius:10px;
-  font-size:16px;
+  width:100%;margin-top:12px;padding:14px;
+  border:none;border-radius:10px;font-size:16px
 }
+.primary{background:var(--primary);color:#000}
+.secondary{background:var(--secondary);color:#000}
+.danger{background:var(--danger);color:#000}
 .start{background:#27ae60;color:#fff}
 .stop{background:#c0392b;color:#fff}
 .reset{background:#7f8c8d;color:#fff}
-.primary{background:var(--primary);color:#000}
-.danger{background:var(--danger);color:#000}
+
 .timer{text-align:center;font-size:2em;margin:12px}
-.card{background:#000;padding:10px;border-radius:8px;margin-bottom:8px}
+.card{
+  background:#000;padding:10px;border-radius:8px;margin-bottom:8px;
+  font-size:14px
+}
 </style>
 </head>
 
@@ -69,7 +59,7 @@ button{
   <select id="drone"></select>
 
   <label>Location</label>
-  <input id="location" />
+  <input id="location">
 
   <label>Reason</label>
   <select id="reason">
@@ -80,10 +70,10 @@ button{
   </select>
 
   <label>Wind</label>
-  <input id="wind" />
+  <input id="wind">
 
   <label>LAANC</label>
-  <input id="laanc" />
+  <input id="laanc">
 
   <label>Notes</label>
   <textarea id="notes"></textarea>
@@ -98,12 +88,18 @@ button{
 </section>
 
 <section>
-  <button class="primary" onclick="toggleHistory()">Flight History</button>
+  <button class="secondary" onclick="toggleHistory()">Flight History</button>
   <div id="history" style="display:none"></div>
 </section>
 
+<!-- 🆕 DRONE TOTALS DASHBOARD -->
 <section>
-  <button class="primary" onclick="toggleMaint()">Drone Maintenance</button>
+  <button class="secondary" onclick="toggleTotals()">Drone Totals</button>
+  <div id="totals" style="display:none"></div>
+</section>
+
+<section>
+  <button class="secondary" onclick="toggleMaint()">Drone Maintenance</button>
   <div id="maint" style="display:none">
     <select id="mDrone"></select>
     <textarea id="mIssues" placeholder="Issues"></textarea>
@@ -115,9 +111,21 @@ button{
 
 <script type="module">
 /* ---------- FIREBASE ---------- */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, enableIndexedDbPersistence }
-from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  query,
+  orderBy,
+  enableIndexedDbPersistence
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDe0dVJ19xr29sX7S7burryDmh7Z6YwL_s",
@@ -131,10 +139,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* 🔴 REQUIRED FOR SAFARI */
+/* REQUIRED FOR SAFARI */
 enableIndexedDbPersistence(db).catch(()=>{});
 
-/* ---------- DATA ---------- */
+/* ---------- DRONES ---------- */
 const drones=[
 "Skyrover S1","DJI Mini 3 Pro #1","DJI Avata Patrol #1","DJI Avata Patrol #2",
 "DJI Mavic 3T #1.2","DJI Mavic 3T #2.1","DJI Mavic #3",
@@ -144,8 +152,7 @@ const drones=[
 "Autel 640 V3 #1"
 ];
 
-const dSel=document.getElementById("drone");
-const mSel=document.getElementById("mDrone");
+const dSel=drone, mSel=mDrone;
 drones.forEach(d=>{
   dSel.innerHTML+=`<option>${d}</option>`;
   mSel.innerHTML+=`<option>${d}</option>`;
@@ -153,11 +160,13 @@ drones.forEach(d=>{
 
 /* ---------- TIMER ---------- */
 let t=null,sec=0;
-function upd(){document.getElementById("timer").innerText=
-String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");}
+function fmt(s){
+  return `${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+}
+function upd(){timer.innerText=fmt(sec)}
 window.startTimer=()=>{if(t)return;t=setInterval(()=>{sec++;upd()},1000)};
 window.stopTimer=()=>{clearInterval(t);t=null};
-window.resetFlight=()=>{stopTimer();sec=0;upd();["location","wind","laanc","notes"].forEach(i=>document.getElementById(i).value="")};
+window.resetFlight=()=>{stopTimer();sec=0;upd();["location","wind","laanc","notes"].forEach(i=>window[i].value="")};
 
 /* ---------- SAVE FLIGHT ---------- */
 window.saveFlight=async()=>{
@@ -169,34 +178,47 @@ window.saveFlight=async()=>{
     wind:wind.value,
     laanc:laanc.value,
     notes:notes.value,
-    time:timer.innerText
+    seconds:sec
   });
   resetFlight();
 };
 
-/* ---------- HISTORY ---------- */
-const hist=document.getElementById("history");
+/* ---------- HISTORY + TOTALS ---------- */
+const hist=history, totalsDiv=totals;
 window.toggleHistory=()=>hist.style.display=hist.style.display==="none"?"block":"none";
+window.toggleTotals=()=>totalsDiv.style.display=totalsDiv.style.display==="none"?"block":"none";
 
 onSnapshot(query(collection(db,"flights"),orderBy("date","desc")),snap=>{
   hist.innerHTML="";
+  const totalsMap={};
+
   snap.forEach(d=>{
     const f=d.data();
+    totalsMap[f.drone]=(totalsMap[f.drone]||0)+f.seconds;
+
     hist.innerHTML+=`
-    <div class="card">
-      <strong>${f.drone}</strong><br>
-      ${f.time} – ${new Date(f.date).toLocaleString()}<br>
-      ${f.location}<br>
-      ${f.reason}<br>
-      <button class="danger" onclick="deleteFlight('${d.id}')">Delete</button>
-    </div>`;
+      <div class="card">
+        <strong>${f.drone}</strong><br>
+        ${fmt(f.seconds)} – ${new Date(f.date).toLocaleString()}<br>
+        ${f.location}<br>${f.reason}<br>
+        <button class="danger" onclick="deleteFlight('${d.id}')">Delete</button>
+      </div>`;
   });
+
+  totalsDiv.innerHTML="";
+  for(const d in totalsMap){
+    totalsDiv.innerHTML+=`
+      <div class="card">
+        <strong>${d}</strong><br>
+        Total: ${fmt(totalsMap[d])}
+      </div>`;
+  }
 });
 
 window.deleteFlight=async(id)=>await deleteDoc(doc(db,"flights",id));
 
 /* ---------- MAINT ---------- */
-const mh=document.getElementById("maintHistory");
+const mh=maintHistory;
 window.toggleMaint=()=>maint.style.display=maint.style.display==="none"?"block":"none";
 
 window.saveMaint=async()=>{
@@ -213,10 +235,10 @@ onSnapshot(query(collection(db,"maintenance"),orderBy("date","desc")),snap=>{
   snap.forEach(d=>{
     const m=d.data();
     mh.innerHTML+=`
-    <div class="card">
-      <strong>${m.drone}</strong><br>
-      ${m.issues}<br>${m.work}
-    </div>`;
+      <div class="card">
+        <strong>${m.drone}</strong><br>
+        ${m.issues}<br>${m.work}
+      </div>`;
   });
 });
 </script>
