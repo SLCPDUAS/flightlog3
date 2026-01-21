@@ -86,7 +86,7 @@ button.danger{background:var(--danger)}
   <option value="SLCPD">SLCPD</option>
 </select>
 
-<label>Wind Conditions</label><input id="wind">
+<label>Weather</label><input id="weather">
 <label>LAANC Authorization Number</label><input id="laanc">
 <label>Preflight Notes</label><textarea id="notes"></textarea>
 
@@ -122,8 +122,10 @@ button.danger{background:var(--danger)}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
+import { 
+  getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot 
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 // ===== Firebase Config =====
 const firebaseConfig = {
@@ -164,10 +166,10 @@ function resetFlight(){stopTimer(); sec=0; updateTimer(); ["drone","location","r
 
 // ===== Flight Functions =====
 async function saveFlight(){
-  if(!$("drone").value || !$("location").value || !$("reason").value){alert("Drone, Location, and Reason are required."); return;}
+  if(!$("drone").value || !$("location").value || !$("reason").value){alert("Drone, Location, and Reason are required.");return;}
   try{
-    const docRef = await addDoc(collection(db,"flights"),{
-      date:new Date().toISOString(),
+    await addDoc(collection(db,"flights"),{
+      date: new Date().toISOString(),
       drone:$("drone").value,
       location:$("location").value,
       reason:$("reason").value,
@@ -176,9 +178,8 @@ async function saveFlight(){
       notes:$("notes").value,
       time:$("timer").textContent
     });
-    console.log("Saved flight:", docRef.id);
     resetFlight();
-  } catch(e){
+  }catch(e){
     console.error("Error saving flight:", e);
     alert("Error saving flight. Check console.");
   }
@@ -223,22 +224,23 @@ function renderFlights(docs){
   $("flightHistory").innerHTML=totalsHtml+$("flightHistory").innerHTML;
 }
 
-const flightsRef = collection(db,"flights");
-const flightsQuery = query(flightsRef, orderBy("date","desc"));
-onSnapshot(flightsQuery, snapshot => renderFlights(snapshot.docs));
+onSnapshot(query(collection(db,"flights"), orderBy("date","desc")), snapshot => renderFlights(snapshot.docs));
 
 // ===== Maintenance =====
 async function saveMaintenance(){
   if(!$("mDrone").value){alert("Drone selection is required.");return;}
   try{
     await addDoc(collection(db,"maintenance"),{
-      date:new Date().toISOString(),
+      date: new Date().toISOString(),
       drone:$("mDrone").value,
       issues:$("mIssues").value,
       work:$("mWork").value
     });
     $("mDrone").value="";$("mIssues").value="";$("mWork").value="";
-  } catch(e){console.error("Error saving maintenance:", e);}
+  }catch(e){
+    console.error("Error saving maintenance:", e);
+    alert("Error saving maintenance. Check console.");
+  }
 }
 
 async function deleteMaintenance(id){await deleteDoc(doc(db,"maintenance",id));}
