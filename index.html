@@ -71,7 +71,6 @@ button.danger{background:var(--danger)}
   <button class="secondary" id="toggleDarkBtn">Toggle Dark Mode</button>
 </header>
 
-<!-- Flight Log -->
 <section>
 <h3>Flight Log</h3>
 <label>Drone Flown *</label>
@@ -99,7 +98,6 @@ button.danger{background:var(--danger)}
 <button id="saveFlightBtn">Save Flight</button>
 </section>
 
-<!-- Flight History Button -->
 <section>
   <button class="secondary" id="toggleFlightHistoryBtn">Flight History</button>
   <div id="flightHistorySection" style="display:none;margin-top:12px">
@@ -107,7 +105,6 @@ button.danger{background:var(--danger)}
   </div>
 </section>
 
-<!-- Drone Maintenance Button -->
 <section>
   <button class="secondary" id="toggleMaintenanceBtn">Drone Maintenance</button>
   <div id="maintenanceSection" style="display:none;margin-top:12px">
@@ -122,6 +119,7 @@ button.danger{background:var(--danger)}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
 import { 
   getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
@@ -133,9 +131,11 @@ const firebaseConfig = {
   projectId: "drone-flight-log-24580",
   storageBucket: "drone-flight-log-24580.appspot.com",
   messagingSenderId: "746343740289",
-  appId: "1:746343740289:web:68939753c6e7c6898a6e80"
+  appId: "1:746343740289:web:68939753c6e7c6898a6e80",
+  measurementId: "G-1KEEPFQFGE"
 };
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const db = getFirestore(app);
 
 // ===== Helpers =====
@@ -163,8 +163,10 @@ function resetFlight(){stopTimer(); sec=0; updateTimer(); ["drone","location","r
 
 // ===== Flight Functions =====
 async function saveFlight(){
-  if(!$("drone").value || !$("location").value || !$("reason").value){alert("Drone, Location, and Reason are required.");return;}
-  try{
+  if(!$("drone").value || !$("location").value || !$("reason").value){
+    alert("Drone, Location, and Reason are required."); return;
+  }
+  try {
     await addDoc(collection(db,"flights"),{
       date: new Date().toISOString(),
       drone:$("drone").value,
@@ -176,11 +178,13 @@ async function saveFlight(){
       time:$("timer").textContent
     });
     resetFlight();
-  }catch(e){
+    console.log("Flight saved successfully");
+  } catch(e) {
     console.error("Error saving flight:", e);
-    alert("Error saving flight. Check console for details.");
+    alert("Error saving flight. Check console.");
   }
 }
+
 async function deleteFlight(id){await deleteDoc(doc(db,"flights",id));}
 
 // ===== Flight History =====
@@ -227,15 +231,23 @@ onSnapshot(flightsQuery, snapshot => renderFlights(snapshot.docs));
 // ===== Maintenance =====
 async function saveMaintenance(){
   if(!$("mDrone").value){alert("Drone selection is required.");return;}
-  await addDoc(collection(db,"maintenance"),{
-    date: new Date().toISOString(),
-    drone:$("mDrone").value,
-    issues:$("mIssues").value,
-    work:$("mWork").value
-  });
-  $("mDrone").value="";$("mIssues").value="";$("mWork").value="";
+  try {
+    await addDoc(collection(db,"maintenance"),{
+      date: new Date().toISOString(),
+      drone:$("mDrone").value,
+      issues:$("mIssues").value,
+      work:$("mWork").value
+    });
+    $("mDrone").value="";$("mIssues").value="";$("mWork").value="";
+    console.log("Maintenance saved");
+  } catch(e) {
+    console.error("Error saving maintenance:", e);
+    alert("Error saving maintenance. Check console.");
+  }
 }
+
 async function deleteMaintenance(id){await deleteDoc(doc(db,"maintenance",id));}
+
 onSnapshot(query(collection(db,"maintenance"), orderBy("date","desc")), snapshot=>{
   $("maintenanceHistory").innerHTML="";
   snapshot.forEach(docSnap=>{
