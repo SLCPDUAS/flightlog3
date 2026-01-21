@@ -6,7 +6,6 @@
 <title>Flight Tracker - Randy Neal</title>
 
 <style>
-/* --- EXISTING STYLES (UNCHANGED) --- */
 :root{
   --bg:#0f1115;--card:#1c1f26;--text:#f1f1f1;
   --primary:#4da3ff;--secondary:#888;--danger:#ff6b6b;
@@ -38,7 +37,6 @@ button{
 .start{background:#27ae60;color:#fff}
 .stop{background:#c0392b;color:#fff}
 .reset{background:#7f8c8d;color:#fff}
-
 .timer{text-align:center;font-size:2em;margin:12px}
 .card{
   background:#000;padding:10px;border-radius:8px;margin-bottom:8px;
@@ -59,7 +57,7 @@ button{
   <select id="drone"></select>
 
   <label>Location</label>
-  <input id="location">
+  <input id="flightLocation">
 
   <label>Reason</label>
   <select id="reason">
@@ -78,7 +76,7 @@ button{
   <label>Notes</label>
   <textarea id="notes"></textarea>
 
-  <div class="timer" id="timer">00:00</div>
+  <div class="timer" id="timer">00:00:00</div>
 
   <button class="start" onclick="startTimer()">Start</button>
   <button class="stop" onclick="stopTimer()">Stop</button>
@@ -92,7 +90,6 @@ button{
   <div id="history" style="display:none"></div>
 </section>
 
-<!-- 🆕 DRONE TOTALS DASHBOARD -->
 <section>
   <button class="secondary" onclick="toggleTotals()">Drone Totals</button>
   <div id="totals" style="display:none"></div>
@@ -110,21 +107,10 @@ button{
 </section>
 
 <script type="module">
-/* ---------- FIREBASE ---------- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
 import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  query,
-  orderBy,
-  enableIndexedDbPersistence
+  getFirestore, collection, addDoc, deleteDoc, doc,
+  onSnapshot, query, orderBy, enableIndexedDbPersistence
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -138,11 +124,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-
-/* REQUIRED FOR SAFARI */
 enableIndexedDbPersistence(db).catch(()=>{});
 
-/* ---------- DRONES ---------- */
+/* DOM */
+const historyEl = document.getElementById("history");
+const totalsEl = document.getElementById("totals");
+
+/* Drones */
 const drones=[
 "Skyrover S1","DJI Mini 3 Pro #1","DJI Avata Patrol #1","DJI Avata Patrol #2",
 "DJI Mavic 3T #1.2","DJI Mavic 3T #2.1","DJI Mavic #3",
@@ -151,29 +139,28 @@ const drones=[
 "Skydio 10-1","Skydio 10-2-2","Skydio 10-3","Skydio 10-4","Skydio 10-5",
 "Autel 640 V3 #1"
 ];
-
-const dSel=drone, mSel=mDrone;
 drones.forEach(d=>{
-  dSel.innerHTML+=`<option>${d}</option>`;
-  mSel.innerHTML+=`<option>${d}</option>`;
+  drone.innerHTML+=`<option>${d}</option>`;
+  mDrone.innerHTML+=`<option>${d}</option>`;
 });
 
-/* ---------- TIMER ---------- */
+/* Timer */
 let t=null,sec=0;
-function fmt(s){
-  return `${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
-}
-function upd(){timer.innerText=fmt(sec)}
+const fmt=s=>`${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+const upd=()=>timer.innerText=fmt(sec);
 window.startTimer=()=>{if(t)return;t=setInterval(()=>{sec++;upd()},1000)};
 window.stopTimer=()=>{clearInterval(t);t=null};
-window.resetFlight=()=>{stopTimer();sec=0;upd();["location","wind","laanc","notes"].forEach(i=>window[i].value="")};
+window.resetFlight=()=>{
+  stopTimer();sec=0;upd();
+  flightLocation.value=wind.value=laanc.value=notes.value="";
+};
 
-/* ---------- SAVE FLIGHT ---------- */
+/* Save Flight */
 window.saveFlight=async()=>{
   await addDoc(collection(db,"flights"),{
     date:new Date().toISOString(),
-    drone:dSel.value,
-    location:location.value,
+    drone:drone.value,
+    location:flightLocation.value,
     reason:reason.value,
     wind:wind.value,
     laanc:laanc.value,
@@ -183,62 +170,51 @@ window.saveFlight=async()=>{
   resetFlight();
 };
 
-/* ---------- HISTORY + TOTALS ---------- */
-const hist=history, totalsDiv=totals;
-window.toggleHistory=()=>hist.style.display=hist.style.display==="none"?"block":"none";
-window.toggleTotals=()=>totalsDiv.style.display=totalsDiv.style.display==="none"?"block":"none";
+/* History + Totals */
+window.toggleHistory=()=>historyEl.style.display=historyEl.style.display==="none"?"block":"none";
+window.toggleTotals=()=>totalsEl.style.display=totalsEl.style.display==="none"?"block":"none";
 
 onSnapshot(query(collection(db,"flights"),orderBy("date","desc")),snap=>{
-  hist.innerHTML="";
-  const totalsMap={};
+  historyEl.innerHTML="";
+  const totals={};
 
   snap.forEach(d=>{
     const f=d.data();
-    totalsMap[f.drone]=(totalsMap[f.drone]||0)+f.seconds;
+    totals[f.drone]=(totals[f.drone]||0)+(f.seconds||0);
 
-    hist.innerHTML+=`
+    historyEl.innerHTML+=`
       <div class="card">
         <strong>${f.drone}</strong><br>
-        ${fmt(f.seconds)} – ${new Date(f.date).toLocaleString()}<br>
+        ${fmt(f.seconds||0)} – ${new Date(f.date).toLocaleString()}<br>
         ${f.location}<br>${f.reason}<br>
         <button class="danger" onclick="deleteFlight('${d.id}')">Delete</button>
       </div>`;
   });
 
-  totalsDiv.innerHTML="";
-  for(const d in totalsMap){
-    totalsDiv.innerHTML+=`
-      <div class="card">
-        <strong>${d}</strong><br>
-        Total: ${fmt(totalsMap[d])}
-      </div>`;
+  totalsEl.innerHTML="";
+  for(const d in totals){
+    totalsEl.innerHTML+=`
+      <div class="card"><strong>${d}</strong><br>Total: ${fmt(totals[d])}</div>`;
   }
 });
 
-window.deleteFlight=async(id)=>await deleteDoc(doc(db,"flights",id));
+window.deleteFlight=id=>deleteDoc(doc(db,"flights",id));
 
-/* ---------- MAINT ---------- */
-const mh=maintHistory;
+/* Maintenance */
 window.toggleMaint=()=>maint.style.display=maint.style.display==="none"?"block":"none";
-
-window.saveMaint=async()=>{
-  await addDoc(collection(db,"maintenance"),{
-    date:new Date().toISOString(),
-    drone:mDrone.value,
-    issues:mIssues.value,
-    work:mWork.value
-  });
-};
+window.saveMaint=()=>addDoc(collection(db,"maintenance"),{
+  date:new Date().toISOString(),
+  drone:mDrone.value,
+  issues:mIssues.value,
+  work:mWork.value
+});
 
 onSnapshot(query(collection(db,"maintenance"),orderBy("date","desc")),snap=>{
-  mh.innerHTML="";
+  maintHistory.innerHTML="";
   snap.forEach(d=>{
     const m=d.data();
-    mh.innerHTML+=`
-      <div class="card">
-        <strong>${m.drone}</strong><br>
-        ${m.issues}<br>${m.work}
-      </div>`;
+    maintHistory.innerHTML+=`
+      <div class="card"><strong>${m.drone}</strong><br>${m.issues}<br>${m.work}</div>`;
   });
 });
 </script>
