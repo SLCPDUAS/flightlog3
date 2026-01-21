@@ -86,7 +86,7 @@ button.danger{background:var(--danger)}
   <option value="SLCPD">SLCPD</option>
 </select>
 
-<label>Weather</label><input id="weather">
+<label>Wind Conditions</label><input id="wind">
 <label>LAANC Authorization Number</label><input id="laanc">
 <label>Preflight Notes</label><textarea id="notes"></textarea>
 
@@ -121,23 +121,20 @@ button.danger{background:var(--danger)}
 </section>
 
 <script type="module">
-// ===== Firebase =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
-import { 
-  getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot 
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
+// ===== Firebase Config =====
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  projectId: "YOUR_PROJECT",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
-  measurementId: "YOUR_MEASUREMENT_ID"
+  apiKey: "AIzaSyDe0dVJ19xr29sX7S7burryDmh7Z6YwL_s",
+  authDomain: "drone-flight-log-24580.firebaseapp.com",
+  projectId: "drone-flight-log-24580",
+  storageBucket: "drone-flight-log-24580.firebasestorage.app",
+  messagingSenderId: "746343740289",
+  appId: "1:746343740289:web:68939753c6e7c6898a6e80",
+  measurementId: "G-1KEEPFQFGE"
 };
-
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 const db = getFirestore(app);
@@ -155,17 +152,13 @@ function populateDropdowns(){
 populateDropdowns();
 
 // ===== Dark Mode =====
-(function(){
-  const s=localStorage.getItem("darkMode");
-  if(s==="true"||(s===null&&matchMedia("(prefers-color-scheme: dark)").matches)) 
-    document.body.classList.add("dark");
-})();
+(function(){const s=localStorage.getItem("darkMode");if(s==="true"||(s===null&&matchMedia("(prefers-color-scheme: dark)").matches)) document.body.classList.add("dark");})();
 function toggleDark(){document.body.classList.toggle("dark");localStorage.setItem("darkMode",document.body.classList.contains("dark"));}
 
 // ===== Timer =====
 let t=null, sec=0;
 function updateTimer(){$("timer").textContent=String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");}
-function startTimer(){if(t) return; t=setInterval(()=>{sec++; updateTimer()},1000);}
+function startTimer(){if(t)return;t=setInterval(()=>{sec++;updateTimer()},1000);}
 function stopTimer(){clearInterval(t); t=null;}
 function resetFlight(){stopTimer(); sec=0; updateTimer(); ["drone","location","reason","wind","laanc","notes"].forEach(id=>$(id).value="");}
 
@@ -173,8 +166,8 @@ function resetFlight(){stopTimer(); sec=0; updateTimer(); ["drone","location","r
 async function saveFlight(){
   if(!$("drone").value || !$("location").value || !$("reason").value){alert("Drone, Location, and Reason are required."); return;}
   try{
-    await addDoc(collection(db,"flights"),{
-      date: new Date().toISOString(),
+    const docRef = await addDoc(collection(db,"flights"),{
+      date:new Date().toISOString(),
       drone:$("drone").value,
       location:$("location").value,
       reason:$("reason").value,
@@ -183,9 +176,14 @@ async function saveFlight(){
       notes:$("notes").value,
       time:$("timer").textContent
     });
+    console.log("Saved flight:", docRef.id);
     resetFlight();
-  }catch(e){console.error("Error saving flight:",e);}
+  } catch(e){
+    console.error("Error saving flight:", e);
+    alert("Error saving flight. Check console.");
+  }
 }
+
 async function deleteFlight(id){await deleteDoc(doc(db,"flights",id));}
 
 // ===== Flight History =====
@@ -194,7 +192,7 @@ function renderFlights(docs){
   const droneTotals={};
   docs.forEach(docSnap=>{
     const f=docSnap.data();
-    const [m,s]=f.time ? f.time.split(":").map(Number) : [0,0];
+    const [m,s]=f.time.split(":").map(Number);
     const seconds=m*60+s;
     droneTotals[f.drone]=(droneTotals[f.drone]||0)+seconds;
     $("flightHistory").innerHTML+=`
@@ -217,13 +215,12 @@ function renderFlights(docs){
         </div>
       </div>`;
   });
-  // cumulative totals
   let totalsHtml="<div style='margin-bottom:8px;font-weight:600'>Cumulative Flight Time per Drone:</div>";
   for(const d in droneTotals){
     const totalSec=droneTotals[d];
     totalsHtml+=`<div><strong>${d}:</strong> ${Math.floor(totalSec/60).toString().padStart(2,"0")}:${(totalSec%60).toString().padStart(2,"0")}</div>`;
   }
-  $("flightHistory").innerHTML=totalsHtml + $("flightHistory").innerHTML;
+  $("flightHistory").innerHTML=totalsHtml+$("flightHistory").innerHTML;
 }
 
 const flightsRef = collection(db,"flights");
@@ -235,14 +232,15 @@ async function saveMaintenance(){
   if(!$("mDrone").value){alert("Drone selection is required.");return;}
   try{
     await addDoc(collection(db,"maintenance"),{
-      date: new Date().toISOString(),
+      date:new Date().toISOString(),
       drone:$("mDrone").value,
       issues:$("mIssues").value,
       work:$("mWork").value
     });
     $("mDrone").value="";$("mIssues").value="";$("mWork").value="";
-  }catch(e){console.error("Error saving maintenance:",e);}
+  } catch(e){console.error("Error saving maintenance:", e);}
 }
+
 async function deleteMaintenance(id){await deleteDoc(doc(db,"maintenance",id));}
 
 onSnapshot(query(collection(db,"maintenance"), orderBy("date","desc")), snapshot=>{
@@ -264,7 +262,7 @@ onSnapshot(query(collection(db,"maintenance"), orderBy("date","desc")), snapshot
 function toggleFlightHistory(){const sec=$("flightHistorySection");sec.style.display=sec.style.display==="none"?"block":"none";}
 function toggleMaintenance(){const sec=$("maintenanceSection");sec.style.display=sec.style.display==="none"?"block":"none";}
 
-// ===== Expose =====
+// ===== Expose to Window =====
 window.startTimer=startTimer;
 window.stopTimer=stopTimer;
 window.resetFlight=resetFlight;
@@ -276,7 +274,7 @@ window.deleteFlight=deleteFlight;
 window.deleteMaintenance=deleteMaintenance;
 window.toggleDark=toggleDark;
 
-// ===== Event Listeners =====
+// ===== Button Event Listeners =====
 $("saveFlightBtn").addEventListener("click",saveFlight);
 $("toggleFlightHistoryBtn").addEventListener("click",toggleFlightHistory);
 $("toggleMaintenanceBtn").addEventListener("click",toggleMaintenance);
