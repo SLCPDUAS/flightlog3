@@ -4,219 +4,288 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Flight Tracker - Randy Neal</title>
-
 <style>
 :root{
-  --bg:#0f1115;--card:#1c1f26;--text:#f1f1f1;
-  --primary:#4da3ff;--secondary:#888;--danger:#ff6b6b;
-  --border:#333
+  --bg:#f2f4f7;--card:#fff;--text:#111;
+  --primary:#1f3a5f;--secondary:#666;
+  --danger:#c0392b;--border:#ccc
 }
+body.dark{
+  --bg:#0f1115;--card:#1c1f26;--text:#f1f1f1;
+  --primary:#4da3ff;--secondary:#999;
+  --danger:#ff6b6b;--border:#333
+}
+*{box-sizing:border-box}
 body{
   margin:0;background:var(--bg);color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right)
+          env(safe-area-inset-bottom) env(safe-area-inset-left)
 }
 header{
-  background:#111;padding:14px;text-align:center;position:sticky;top:0
+  background:var(--primary);color:#fff;
+  padding:16px;text-align:center;
+  position:sticky;top:0;z-index:10
 }
 section{
-  background:var(--card);margin:12px;padding:14px;border-radius:12px
+  background:var(--card);
+  margin:12px;padding:14px;border-radius:12px
 }
-label{display:block;margin-top:10px}
+label{display:block;margin-top:12px;font-weight:600}
 input,textarea,select{
-  width:100%;padding:12px;margin-top:6px;
-  border-radius:8px;border:1px solid var(--border);
-  background:#000;color:#fff
+  width:100%;margin-top:6px;padding:12px;font-size:16px;border-radius:8px;
+  border:1px solid var(--border);background:transparent;color:var(--text)
 }
+textarea{min-height:70px}
+select{background:var(--card);appearance:auto;-webkit-appearance:menulist}
 button{
-  width:100%;margin-top:12px;padding:14px;
-  border:none;border-radius:10px;font-size:16px
+  width:100%;padding:14px;margin-top:12px;
+  font-size:16px;border-radius:10px;
+  border:none;background:var(--primary);color:#fff
 }
-.primary{background:var(--primary);color:#000}
-.secondary{background:var(--secondary);color:#000}
-.danger{background:var(--danger);color:#000}
-.start{background:#27ae60;color:#fff}
-.stop{background:#c0392b;color:#fff}
-.reset{background:#7f8c8d;color:#fff}
-.timer{text-align:center;font-size:2em;margin:12px}
-.card{
-  background:#000;padding:10px;border-radius:8px;margin-bottom:8px;
-  font-size:14px
+button.secondary{background:var(--secondary)}
+button.danger{background:var(--danger)}
+
+.timer{text-align:center;font-size:2em;font-weight:bold;margin:12px 0}
+.timer-controls{display:flex;gap:8px}
+.timer-controls button{flex:1;font-size:16px;padding:12px;border-radius:8px;border:none;color:#fff}
+.timer-controls button.start{background:#27ae60}   /* green */
+.timer-controls button.stop{background:#c0392b}    /* red */
+.timer-controls button.reset{background:#7f8c8d}   /* gray */
+
+.flight-card{
+  background:var(--bg);border-radius:10px;padding:8px;margin-bottom:6px;font-size:14px
 }
+.flight-header{display:flex;justify-content:space-between;flex-wrap:wrap;font-weight:600}
+.flight-details{display:none;margin-top:6px;font-size:13px}
+.flight-actions{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.flight-actions button{padding:6px;font-size:12px;flex:1}
+.history-container{max-height:220px;overflow-y:auto;padding-right:4px}
 </style>
 </head>
-
 <body>
 
 <header>
-  <h2>Flight Tracker</h2>
-  <div>Randy Neal – FAA #5208259</div>
+  <h1>Flight Tracker</h1>
+  <p>Randy Neal<br>FAA Pilot License #5208259</p>
+  <button class="secondary" id="toggleDarkBtn">Toggle Dark Mode</button>
 </header>
 
+<!-- Flight Log -->
 <section>
-  <label>Drone</label>
-  <select id="drone"></select>
+<h3>Flight Log</h3>
+<label>Drone Flown *</label>
+<select id="drone"></select>
+<label>Location *</label><input id="location">
 
-  <label>Location</label>
-  <input id="flightLocation">
+<label>Reason for Flight *</label>
+<select id="reason">
+  <option value="">Select Reason</option>
+  <option value="Recreational">Recreational</option>
+  <option value="Training">Training</option>
+  <option value="SLCPD">SLCPD</option>
+</select>
 
-  <label>Reason</label>
-  <select id="reason">
-    <option value="">Select</option>
-    <option>Recreational</option>
-    <option>Training</option>
-    <option>SLCPD</option>
-  </select>
+<label>Weather</label><input id="weather">
+<label>LAANC Authorization Number</label><input id="laanc">
+<label>Preflight Notes</label><textarea id="notes"></textarea>
 
-  <label>Wind</label>
-  <input id="wind">
-
-  <label>LAANC</label>
-  <input id="laanc">
-
-  <label>Notes</label>
-  <textarea id="notes"></textarea>
-
-  <div class="timer" id="timer">00:00:00</div>
-
-  <button class="start" onclick="startTimer()">Start</button>
-  <button class="stop" onclick="stopTimer()">Stop</button>
-  <button class="reset" onclick="resetFlight()">Reset</button>
-
-  <button class="primary" onclick="saveFlight()">Save Flight</button>
+<div class="timer" id="timer">00:00</div>
+<div class="timer-controls">
+  <button class="start">Start</button>
+  <button class="stop">End</button>
+  <button class="reset">Reset</button>
+</div>
+<button id="saveFlightBtn">Save Flight</button>
 </section>
 
+<!-- Flight History Button -->
 <section>
-  <button class="secondary" onclick="toggleHistory()">Flight History</button>
-  <div id="history" style="display:none"></div>
+  <button class="secondary" id="toggleFlightHistoryBtn">Flight History</button>
+  <div id="flightHistorySection" style="display:none;margin-top:12px">
+    <div class="history-container" id="flightHistory"></div>
+  </div>
 </section>
 
+<!-- Drone Maintenance Button -->
 <section>
-  <button class="secondary" onclick="toggleTotals()">Drone Totals</button>
-  <div id="totals" style="display:none"></div>
-</section>
-
-<section>
-  <button class="secondary" onclick="toggleMaint()">Drone Maintenance</button>
-  <div id="maint" style="display:none">
+  <button class="secondary" id="toggleMaintenanceBtn">Drone Maintenance</button>
+  <div id="maintenanceSection" style="display:none;margin-top:12px">
+    <label>Drone *</label>
     <select id="mDrone"></select>
-    <textarea id="mIssues" placeholder="Issues"></textarea>
-    <textarea id="mWork" placeholder="Maintenance"></textarea>
-    <button class="primary" onclick="saveMaint()">Save Maintenance</button>
-    <div id="maintHistory"></div>
+    <label>Issues Found</label><textarea id="mIssues"></textarea>
+    <label>Maintenance Performed</label><textarea id="mWork"></textarea>
+    <button id="saveMaintenanceBtn">Save Maintenance</button>
+    <div class="history-container" id="maintenanceHistory"></div>
   </div>
 </section>
 
 <script type="module">
+// ===== Firebase =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import {
-  getFirestore, collection, addDoc, deleteDoc, doc,
-  onSnapshot, query, orderBy, enableIndexedDbPersistence
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
+import { 
+  getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDe0dVJ19xr29sX7S7burryDmh7Z6YwL_s",
-  authDomain: "drone-flight-log-24580.firebaseapp.com",
-  projectId: "drone-flight-log-24580",
-  storageBucket: "drone-flight-log-24580.firebasestorage.app",
-  messagingSenderId: "746343740289",
-  appId: "1:746343740289:web:68939753c6e7c6898a6e80"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID",
+  measurementId: "YOUR_MEASUREMENT_ID"
 };
 
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const db = getFirestore(app);
-enableIndexedDbPersistence(db).catch(()=>{});
 
-/* DOM */
-const historyEl = document.getElementById("history");
-const totalsEl = document.getElementById("totals");
+// ===== Helpers =====
+const $ = id => document.getElementById(id);
+const drones=["Skyrover S1","DJI Mini 3 Pro #1","DJI Avata Patrol #1","DJI Avata Patrol #2","DJI Mavic 3T #1.2","DJI Mavic 3T #2.1","DJI Mavic #3","DJI Matrice 4T #1","DJI Matrice 4T #2","DJI Matrice 4T #3","DJI Mavic 3E #1","DJI Mavic PT30T #1","Skydio 10-1","Skydio 10-2-2","Skydio 10-3","Skydio 10-4","Skydio 10-5","Autel 640 V3 #1"];
 
-/* Drones */
-const drones=[
-"Skyrover S1","DJI Mini 3 Pro #1","DJI Avata Patrol #1","DJI Avata Patrol #2",
-"DJI Mavic 3T #1.2","DJI Mavic 3T #2.1","DJI Mavic #3",
-"DJI Matrice 4T #1","DJI Matrice 4T #2","DJI Matrice 4T #3",
-"DJI Mavic 3E #1","DJI Mavic PT30T #1",
-"Skydio 10-1","Skydio 10-2-2","Skydio 10-3","Skydio 10-4","Skydio 10-5",
-"Autel 640 V3 #1"
-];
-drones.forEach(d=>{
-  drone.innerHTML+=`<option>${d}</option>`;
-  mDrone.innerHTML+=`<option>${d}</option>`;
-});
+function populateDropdowns(){
+  const flight=$("drone"), maint=$("mDrone");
+  flight.innerHTML='<option value="">Select Drone</option>';
+  maint.innerHTML='<option value="">Select Drone</option>';
+  drones.forEach(d=>{flight.innerHTML+=`<option>${d}</option>`; maint.innerHTML+=`<option>${d}</option>`;});
+}
+populateDropdowns();
 
-/* Timer */
-let t=null,sec=0;
-const fmt=s=>`${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
-const upd=()=>timer.innerText=fmt(sec);
-window.startTimer=()=>{if(t)return;t=setInterval(()=>{sec++;upd()},1000)};
-window.stopTimer=()=>{clearInterval(t);t=null};
-window.resetFlight=()=>{
-  stopTimer();sec=0;upd();
-  flightLocation.value=wind.value=laanc.value=notes.value="";
-};
+// ===== Dark Mode =====
+(function(){
+  const s=localStorage.getItem("darkMode");
+  if(s==="true"||(s===null&&matchMedia("(prefers-color-scheme: dark)").matches)) 
+    document.body.classList.add("dark");
+})();
+function toggleDark(){document.body.classList.toggle("dark");localStorage.setItem("darkMode",document.body.classList.contains("dark"));}
 
-/* Save Flight */
-window.saveFlight=async()=>{
-  await addDoc(collection(db,"flights"),{
-    date:new Date().toISOString(),
-    drone:drone.value,
-    location:flightLocation.value,
-    reason:reason.value,
-    wind:wind.value,
-    laanc:laanc.value,
-    notes:notes.value,
-    seconds:sec
-  });
-  resetFlight();
-};
+// ===== Timer =====
+let t=null, sec=0;
+function updateTimer(){$("timer").textContent=String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");}
+function startTimer(){if(t) return; t=setInterval(()=>{sec++; updateTimer()},1000);}
+function stopTimer(){clearInterval(t); t=null;}
+function resetFlight(){stopTimer(); sec=0; updateTimer(); ["drone","location","reason","wind","laanc","notes"].forEach(id=>$(id).value="");}
 
-/* History + Totals */
-window.toggleHistory=()=>historyEl.style.display=historyEl.style.display==="none"?"block":"none";
-window.toggleTotals=()=>totalsEl.style.display=totalsEl.style.display==="none"?"block":"none";
+// ===== Flight Functions =====
+async function saveFlight(){
+  if(!$("drone").value || !$("location").value || !$("reason").value){alert("Drone, Location, and Reason are required."); return;}
+  try{
+    await addDoc(collection(db,"flights"),{
+      date: new Date().toISOString(),
+      drone:$("drone").value,
+      location:$("location").value,
+      reason:$("reason").value,
+      wind:$("wind").value,
+      laanc:$("laanc").value,
+      notes:$("notes").value,
+      time:$("timer").textContent
+    });
+    resetFlight();
+  }catch(e){console.error("Error saving flight:",e);}
+}
+async function deleteFlight(id){await deleteDoc(doc(db,"flights",id));}
 
-onSnapshot(query(collection(db,"flights"),orderBy("date","desc")),snap=>{
-  historyEl.innerHTML="";
-  const totals={};
-
-  snap.forEach(d=>{
-    const f=d.data();
-    totals[f.drone]=(totals[f.drone]||0)+(f.seconds||0);
-
-    historyEl.innerHTML+=`
-      <div class="card">
-        <strong>${f.drone}</strong><br>
-        ${fmt(f.seconds||0)} – ${new Date(f.date).toLocaleString()}<br>
-        ${f.location}<br>${f.reason}<br>
-        <button class="danger" onclick="deleteFlight('${d.id}')">Delete</button>
+// ===== Flight History =====
+function renderFlights(docs){
+  $("flightHistory").innerHTML="";
+  const droneTotals={};
+  docs.forEach(docSnap=>{
+    const f=docSnap.data();
+    const [m,s]=f.time ? f.time.split(":").map(Number) : [0,0];
+    const seconds=m*60+s;
+    droneTotals[f.drone]=(droneTotals[f.drone]||0)+seconds;
+    $("flightHistory").innerHTML+=`
+      <div class="flight-card">
+        <div class="flight-header">
+          <span>${new Date(f.date).toLocaleString()}</span>
+          <span>${f.drone}</span>
+          <span>${f.time}</span>
+        </div>
+        <div class="flight-details">
+          <div><strong>Location:</strong> ${f.location || ""}</div>
+          <div><strong>Reason:</strong> ${f.reason || ""}</div>
+          <div><strong>Wind:</strong> ${f.wind || ""}</div>
+          <div><strong>LAANC:</strong> ${f.laanc || ""}</div>
+          <div><strong>Notes:</strong> ${f.notes || ""}</div>
+        </div>
+        <div class="flight-actions">
+          <button class="secondary" onclick="this.previousElementSibling.style.display=this.previousElementSibling.style.display==='none'?'block':'none'">Details</button>
+          <button class="danger" onclick="deleteFlight('${docSnap.id}')">Delete</button>
+        </div>
       </div>`;
   });
-
-  totalsEl.innerHTML="";
-  for(const d in totals){
-    totalsEl.innerHTML+=`
-      <div class="card"><strong>${d}</strong><br>Total: ${fmt(totals[d])}</div>`;
+  // cumulative totals
+  let totalsHtml="<div style='margin-bottom:8px;font-weight:600'>Cumulative Flight Time per Drone:</div>";
+  for(const d in droneTotals){
+    const totalSec=droneTotals[d];
+    totalsHtml+=`<div><strong>${d}:</strong> ${Math.floor(totalSec/60).toString().padStart(2,"0")}:${(totalSec%60).toString().padStart(2,"0")}</div>`;
   }
-});
+  $("flightHistory").innerHTML=totalsHtml + $("flightHistory").innerHTML;
+}
 
-window.deleteFlight=id=>deleteDoc(doc(db,"flights",id));
+const flightsRef = collection(db,"flights");
+const flightsQuery = query(flightsRef, orderBy("date","desc"));
+onSnapshot(flightsQuery, snapshot => renderFlights(snapshot.docs));
 
-/* Maintenance */
-window.toggleMaint=()=>maint.style.display=maint.style.display==="none"?"block":"none";
-window.saveMaint=()=>addDoc(collection(db,"maintenance"),{
-  date:new Date().toISOString(),
-  drone:mDrone.value,
-  issues:mIssues.value,
-  work:mWork.value
-});
+// ===== Maintenance =====
+async function saveMaintenance(){
+  if(!$("mDrone").value){alert("Drone selection is required.");return;}
+  try{
+    await addDoc(collection(db,"maintenance"),{
+      date: new Date().toISOString(),
+      drone:$("mDrone").value,
+      issues:$("mIssues").value,
+      work:$("mWork").value
+    });
+    $("mDrone").value="";$("mIssues").value="";$("mWork").value="";
+  }catch(e){console.error("Error saving maintenance:",e);}
+}
+async function deleteMaintenance(id){await deleteDoc(doc(db,"maintenance",id));}
 
-onSnapshot(query(collection(db,"maintenance"),orderBy("date","desc")),snap=>{
-  maintHistory.innerHTML="";
-  snap.forEach(d=>{
-    const m=d.data();
-    maintHistory.innerHTML+=`
-      <div class="card"><strong>${m.drone}</strong><br>${m.issues}<br>${m.work}</div>`;
+onSnapshot(query(collection(db,"maintenance"), orderBy("date","desc")), snapshot=>{
+  $("maintenanceHistory").innerHTML="";
+  snapshot.forEach(docSnap=>{
+    const m=docSnap.data();
+    $("maintenanceHistory").innerHTML+=`
+      <div class="flight-card">
+        <strong>${new Date(m.date).toLocaleString()}</strong><br>
+        <strong>Drone:</strong> ${m.drone}<br>
+        <strong>Issues:</strong> ${m.issues}<br>
+        <strong>Maintenance:</strong> ${m.work}<br>
+        <button class="danger" onclick="deleteMaintenance('${docSnap.id}')">Delete</button>
+      </div>`;
   });
 });
+
+// ===== Toggle Functions =====
+function toggleFlightHistory(){const sec=$("flightHistorySection");sec.style.display=sec.style.display==="none"?"block":"none";}
+function toggleMaintenance(){const sec=$("maintenanceSection");sec.style.display=sec.style.display==="none"?"block":"none";}
+
+// ===== Expose =====
+window.startTimer=startTimer;
+window.stopTimer=stopTimer;
+window.resetFlight=resetFlight;
+window.saveFlight=saveFlight;
+window.toggleFlightHistory=toggleFlightHistory;
+window.toggleMaintenance=toggleMaintenance;
+window.saveMaintenance=saveMaintenance;
+window.deleteFlight=deleteFlight;
+window.deleteMaintenance=deleteMaintenance;
+window.toggleDark=toggleDark;
+
+// ===== Event Listeners =====
+$("saveFlightBtn").addEventListener("click",saveFlight);
+$("toggleFlightHistoryBtn").addEventListener("click",toggleFlightHistory);
+$("toggleMaintenanceBtn").addEventListener("click",toggleMaintenance);
+$("saveMaintenanceBtn").addEventListener("click",saveMaintenance);
+document.querySelector(".start").addEventListener("click",startTimer);
+document.querySelector(".stop").addEventListener("click",stopTimer);
+document.querySelector(".reset").addEventListener("click",resetFlight);
+$("toggleDarkBtn").addEventListener("click",toggleDark);
+
 </script>
 </body>
 </html>
