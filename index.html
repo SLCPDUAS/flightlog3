@@ -122,7 +122,6 @@ button.danger{background:var(--danger)}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-analytics.js";
 import { 
   getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, onSnapshot 
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
@@ -132,13 +131,11 @@ const firebaseConfig = {
   apiKey: "AIzaSyDe0dVJ19xr29sX7S7burryDmh7Z6YwL_s",
   authDomain: "drone-flight-log-24580.firebaseapp.com",
   projectId: "drone-flight-log-24580",
-  storageBucket: "drone-flight-log-24580.firebasestorage.app",
+  storageBucket: "drone-flight-log-24580.appspot.com",
   messagingSenderId: "746343740289",
-  appId: "1:746343740289:web:68939753c6e7c6898a6e80",
-  measurementId: "G-1KEEPFQFGE"
+  appId: "1:746343740289:web:68939753c6e7c6898a6e80"
 };
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 const db = getFirestore(app);
 
 // ===== Helpers =====
@@ -181,10 +178,9 @@ async function saveFlight(){
     resetFlight();
   }catch(e){
     console.error("Error saving flight:", e);
-    alert("Error saving flight. Check console.");
+    alert("Error saving flight. Check console for details.");
   }
 }
-
 async function deleteFlight(id){await deleteDoc(doc(db,"flights",id));}
 
 // ===== Flight History =====
@@ -224,27 +220,22 @@ function renderFlights(docs){
   $("flightHistory").innerHTML=totalsHtml+$("flightHistory").innerHTML;
 }
 
-onSnapshot(query(collection(db,"flights"), orderBy("date","desc")), snapshot => renderFlights(snapshot.docs));
+const flightsRef = collection(db,"flights");
+const flightsQuery = query(flightsRef, orderBy("date","desc"));
+onSnapshot(flightsQuery, snapshot => renderFlights(snapshot.docs));
 
 // ===== Maintenance =====
 async function saveMaintenance(){
   if(!$("mDrone").value){alert("Drone selection is required.");return;}
-  try{
-    await addDoc(collection(db,"maintenance"),{
-      date: new Date().toISOString(),
-      drone:$("mDrone").value,
-      issues:$("mIssues").value,
-      work:$("mWork").value
-    });
-    $("mDrone").value="";$("mIssues").value="";$("mWork").value="";
-  }catch(e){
-    console.error("Error saving maintenance:", e);
-    alert("Error saving maintenance. Check console.");
-  }
+  await addDoc(collection(db,"maintenance"),{
+    date: new Date().toISOString(),
+    drone:$("mDrone").value,
+    issues:$("mIssues").value,
+    work:$("mWork").value
+  });
+  $("mDrone").value="";$("mIssues").value="";$("mWork").value="";
 }
-
 async function deleteMaintenance(id){await deleteDoc(doc(db,"maintenance",id));}
-
 onSnapshot(query(collection(db,"maintenance"), orderBy("date","desc")), snapshot=>{
   $("maintenanceHistory").innerHTML="";
   snapshot.forEach(docSnap=>{
