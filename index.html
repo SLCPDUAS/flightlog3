@@ -87,7 +87,7 @@ button.danger{background:var(--danger)}
   <option value="SLCPD">SLCPD</option>
 </select>
 
-<label>Wind Conditions</label><input id="wind">
+<label>Weather</label><input id="weather">
 <label>LAANC Authorization Number</label><input id="laanc">
 <label>Preflight Notes</label><textarea id="notes"></textarea>
 
@@ -162,7 +162,7 @@ let t=null, sec=0;
 function updateTimer(){$("timer").textContent=String(Math.floor(sec/60)).padStart(2,"0")+":"+String(sec%60).padStart(2,"0");}
 function startTimer(){if(t)return;t=setInterval(()=>{sec++;updateTimer()},1000);}
 function stopTimer(){clearInterval(t); t=null;}
-function resetFlight(){stopTimer(); sec=0; updateTimer(); ["drone","location","reason","wind","laanc","notes"].forEach(id=>$(id).value="");}
+function resetFlight(){stopTimer(); sec=0; updateTimer(); ["drone","location","reason","weather","laanc","notes"].forEach(id=>$(id).value="");}
 
 // ===== Flight Functions =====
 async function saveFlight(){
@@ -173,7 +173,7 @@ async function saveFlight(){
       drone:$("drone").value,
       location:$("location").value,
       reason:$("reason").value,
-      wind:$("wind").value,
+      weather:$("weather").value,
       laanc:$("laanc").value,
       notes:$("notes").value,
       time:$("timer").textContent
@@ -206,7 +206,7 @@ function renderFlights(docs){
         <div class="flight-details">
           <div><strong>Location:</strong> ${f.location}</div>
           <div><strong>Reason:</strong> ${f.reason}</div>
-          <div><strong>Wind:</strong> ${f.wind}</div>
+          <div><strong>Weather:</strong> ${f.weather}</div>
           <div><strong>LAANC:</strong> ${f.laanc}</div>
           <div><strong>Notes:</strong> ${f.notes}</div>
         </div>
@@ -289,3 +289,4 @@ $("toggleDarkBtn").addEventListener("click",toggleDark);
 </script>
 </body>
 </html>
+
